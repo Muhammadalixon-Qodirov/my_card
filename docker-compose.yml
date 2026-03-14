@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+
+  web:
+    build: .
+    container_name: mycard_cont
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    volumes:
+      - ./app:/app
+      - ./static:/app/static
+      - ./media:/app/media
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: always
+    networks:
+      - mycard_network
+
+  db:
+    image: postgres:15
+    container_name: mycard_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - mycard_network
+
+  redis:
+    image: redis:7
+    container_name: mycard_redis
+    restart: always
+    networks:
+      - mycard_network
+
+  nginx:
+    image: nginx:latest
+    container_name: mycard_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/mycard.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/app/static
+      - ./media:/app/media
+    depends_on:
+      - web
+    restart: always
+    networks:
+      - mycard_network
+
+volumes:
+  postgres_data:
+
+networks:
+  mycard_network:

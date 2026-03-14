@@ -1,0 +1,18 @@
+# Virtual environment
+venv
+__pycache__
+*.pyc
+*.pyo
+
+# Git
+.git
+.gitignore
+
+# Logs va media
+logs/
+media/
+static/
+.idea/
+
+# Secrets
+.env
