@@ -47,20 +47,20 @@ class RegisterSerializer(serializers.Serializer):
 
 class OTPVerifySerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
-    code = serializers.CharField(max_length=6, min_length=6)
+    code = serializers.CharField(max_length=30, min_length=6)
 
     def validate_phone(self, value):
         return _validate_phone(value)
 
-    def validate_code(self, value):
-        if not value.isdigit():
-            raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
-        return value
+    # def validate_code(self, value):
+    #     if not value.isdigit():
+    #         raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
+    #     return value
 
 
 class OTPLoginSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
-    code = serializers.CharField(max_length=6, min_length=6)
+    code = serializers.CharField(max_length=30, min_length=6)
 
     def validate_phone(self, value):
         value = _validate_phone(value)
@@ -68,10 +68,10 @@ class OTPLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Bu raqam ro'yxatdan o'tmagan.")
         return value
 
-    def validate_code(self, value):
-        if not value.isdigit():
-            raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
-        return value
+    # def validate_code(self, value):
+    #     if not value.isdigit():
+    #         raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
+    #     return value
 
 
 class LogoutSerializer(serializers.Serializer):
