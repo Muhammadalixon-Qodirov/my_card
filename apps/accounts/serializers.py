@@ -1,25 +1,16 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from apps.core.validators import validate_phone_number
 from .models import CustomUser
 
 
-class SignUpSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True, required=True, min_length=8)
-
-    class Meta:
-        model = CustomUser
-        fields = ('phone', 'password', 'confirm_password', 'first_name', 'last_name', 'gender', 'birth_date')
-
-    def validate(self, data):
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError("Passwords do not match.")
-        return data
-
-    def create(self, validated_data):
-        validated_data.pop('confirm_password')
-        user = CustomUser.objects.create_user(**validated_data)
-        return user
+def _validate_phone(value):
+    try:
+        validate_phone_number(value)
+    except DjangoValidationError as e:
+        raise serializers.ValidationError(e.messages)
+    return value
 
 
 class SignInSerializer(serializers.Serializer):
@@ -27,12 +18,8 @@ class SignInSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, required=True)
 
     def validate(self, data):
-        phone = data.get('phone')
-        password = data.get('password')
-
-        if not phone or not password:
-            raise serializers.ValidationError("Both phone and password are required.")
-
+        if not data.get('phone') or not data.get('password'):
+            raise serializers.ValidationError("Telefon raqam va parol talab qilinadi.")
         return data
 
 
@@ -41,3 +28,46 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('phone', 'first_name', 'last_name', 'gender', 'birth_date', 'is_active', 'is_staff', 'date_joined', 'last_login')
         read_only_fields = ('phone', 'is_active', 'is_staff', 'date_joined', 'last_login')
+
+
+class RegisterSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=15)
+    first_name = serializers.CharField(max_length=50)
+    last_name = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    gender = serializers.ChoiceField(choices=['male', 'female'], required=False, allow_null=True, default=None)
+    birth_date = serializers.DateField(required=False, allow_null=True, default=None)
+
+    def validate_phone(self, value):
+        value = _validate_phone(value)
+        if CustomUser.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("Bu raqam allaqachon ro'yxatdan o'tgan.")
+        return value
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate_phone(self, value):
+        return _validate_phone(value)
+
+    def validate_code(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
+        return value
+
+
+class OTPLoginSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate_phone(self, value):
+        value = _validate_phone(value)
+        if not CustomUser.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("Bu raqam ro'yxatdan o'tmagan.")
+        return value
+
+    def validate_code(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
+        return value
