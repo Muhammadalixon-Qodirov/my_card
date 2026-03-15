@@ -37,12 +37,19 @@ class RegisterSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
     gender = serializers.ChoiceField(choices=['male', 'female'], required=False, allow_null=True, default=None)
     birth_date = serializers.DateField(required=False, allow_null=True, default=None)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    password_confirm = serializers.CharField(write_only=True, required=True, min_length=8)
 
     def validate_phone(self, value):
         value = _validate_phone(value)
         if CustomUser.objects.filter(phone=value).exists():
             raise serializers.ValidationError("Bu raqam allaqachon ro'yxatdan o'tgan.")
         return value
+    
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError("Parol va parol tasdiqlash mos kelmadi.")
+        return data
 
 
 class OTPVerifySerializer(serializers.Serializer):
