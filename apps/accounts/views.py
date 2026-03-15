@@ -11,12 +11,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
-    SignInSerializer,
-    UserProfileSerializer,
-    RegisterSerializer,
-    OTPVerifySerializer,
-    OTPLoginSerializer,
-    LogoutSerializer,
+    SignInSerializer, UserProfileSerializer,
+    RegisterSerializer, OTPVerifySerializer,
+    OTPLoginSerializer, LogoutSerializer,
 )
 
 
