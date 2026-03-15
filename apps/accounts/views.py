@@ -83,6 +83,7 @@ class RegisterView(APIView):
             'first_name': serializer.validated_data['first_name'],
             'last_name': serializer.validated_data.get('last_name', ''),
             'gender': serializer.validated_data.get('gender'),
+            'password': serializer.validated_data['password'],
             'birth_date': str(serializer.validated_data['birth_date'])
                           if serializer.validated_data.get('birth_date') else None,
         }, timeout=OTP_TTL)
@@ -122,8 +123,10 @@ class OTPVerifyView(APIView):
             first_name=user_data['first_name'],
             last_name=user_data.get('last_name', ''),
             gender=user_data.get('gender'),
-            birth_date=user_data.get('birth_date'),
+            birth_date=user_data.get('birth_date')
         )
+        user.set_password(user_data['password'])
+        user.save()
 
         return Response({
             "status": True,
