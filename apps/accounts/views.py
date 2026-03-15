@@ -7,16 +7,22 @@ from rest_framework.views import APIView
 from apps.accounts.models import CustomUser
 from apps.accounts.tasks import send_sms_otp, OTP_TTL
 from .tokens import get_tokens_for_user
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .serializers import (
     SignInSerializer,
     UserProfileSerializer,
     RegisterSerializer,
     OTPVerifySerializer,
     OTPLoginSerializer,
+    LogoutSerializer,
 )
+
 
 REGISTER_PENDING_KEY = 'register_pending:{phone}'
 OTP_KEY = 'phone_otp:{phone}'
+
 
 
 class SignInView(APIView):
@@ -35,6 +41,7 @@ class SignInView(APIView):
         return Response({"error": "Telefon raqam yoki parol noto'g'ri."}, status=400)
 
 
+
 class MyProfileView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -49,6 +56,7 @@ class MyProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=200)
+
 
 
 class RegisterView(APIView):
@@ -81,6 +89,7 @@ class RegisterView(APIView):
 
         send_sms_otp.apply_async(args=[phone], countdown=1)
         return Response({"status": True, "message": "OTP kod yuborildi. 5 daqiqa ichida tasdiqlang."}, status=200)
+
 
 
 class OTPVerifyView(APIView):
@@ -122,6 +131,7 @@ class OTPVerifyView(APIView):
         }, status=201)
 
 
+
 class OTPLoginView(APIView):
     permission_classes = (AllowAny,)
 
@@ -146,3 +156,17 @@ class OTPLoginView(APIView):
             "tokens": get_tokens_for_user(user),
         }, status=200)
 
+
+class LogoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @swagger_auto_schema(request_body=LogoutSerializer, tags=["Auth"])
+    def post(self, request, *args, **kwargs):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            token = RefreshToken(serializer.validated_data['refresh'])
+            token.blacklist()
+        except TokenError:
+            return Response({"message": "Token yaroqsiz yoki allaqachon bekor qilingan."}, status=400)
+        return Response({"status": True, "message": "Muvaffaqiyatli chiqildi."}, status=205)

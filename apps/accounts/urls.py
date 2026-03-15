@@ -7,10 +7,13 @@ from .views import (
     RegisterView,
     OTPVerifyView,
     OTPLoginView,
+    LogoutView,
 )
+
 
 urlpatterns = [
     path('login/', SignInView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', MyProfileView.as_view(), name='user-profile'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 

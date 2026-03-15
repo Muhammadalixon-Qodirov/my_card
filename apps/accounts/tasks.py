@@ -12,8 +12,9 @@ OTP_TTL = 60 * 5
 @shared_task
 def send_sms_otp(phone: str):
     otp_code = str(randint(100000, 999999))
-    cache.set(f'phone_otp:{phone}', otp_code, timeout=OTP_TTL)
-    message = f"MyCard ilovasida bir martalik tasdiqlash kodi: <code>{otp_code}</code>\nBu kod 5 daqiqa davomida amal qiladi!\nKodni hech kimga bermang!"
+    cache.set(f'phone_otp:{phone}', "Bu Eskiz dan test", timeout=OTP_TTL)
+    message = "Bu Eskiz dan test"
+    # message = f"MyCard ilovasida bir martalik tasdiqlash kodi: <code>{otp_code}</code>\nBu kod 5 daqiqa davomida amal qiladi!\nKodni hech kimga bermang!"
     try:
         send_sms(phone, message)
     except Exception as exc:

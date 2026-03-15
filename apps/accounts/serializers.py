@@ -5,6 +5,7 @@ from apps.core.validators import validate_phone_number
 from .models import CustomUser
 
 
+
 def _validate_phone(value):
     try:
         validate_phone_number(value)
@@ -71,3 +72,7 @@ class OTPLoginSerializer(serializers.Serializer):
         if not value.isdigit():
             raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
         return value
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
