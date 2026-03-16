@@ -94,3 +94,20 @@ class PasswordChangeSerializer(serializers.Serializer):
         if data['new_password'] != data['new_password_confirm']:
             raise serializers.ValidationError("Yangi parol va parol tasdiqlash mos kelmadi.")
         return data
+
+
+class DeleteAccountRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+
+class DeleteAccountConfirmSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate_phone(self, value):
+        return _validate_phone(value)
+
+    def validate_code(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
+        return value

@@ -14,12 +14,15 @@ from .serializers import (
     SignInSerializer, UserProfileSerializer,
     RegisterSerializer, OTPVerifySerializer,
     OTPLoginSerializer, LogoutSerializer,
-    PasswordChangeSerializer
+    PasswordChangeSerializer,
+    DeleteAccountRequestSerializer,
+    DeleteAccountConfirmSerializer,
 )
 
 
 REGISTER_PENDING_KEY = 'register_pending:{phone}'
 OTP_KEY = 'phone_otp:{phone}'
+DELETE_ACCOUNT_PENDING_KEY = 'delete_account_pending:{phone}'
 
 
 
@@ -192,3 +195,69 @@ class PasswordChangeView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"status": True, "message": "Parol muvaffaqiyatli o'zgartirildi."}, status=200)
+
+
+class DeleteAccountRequestView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @swagger_auto_schema(request_body=DeleteAccountRequestSerializer, tags=["Auth"])
+    def post(self, request, *args, **kwargs):
+        serializer = DeleteAccountRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        password = serializer.validated_data['password']
+        if not user.check_password(password):
+            return Response({"message": "Parol noto'g'ri."}, status=400)
+
+        phone = user.phone
+        otp_key = OTP_KEY.format(phone=phone)
+
+        if cache.get(otp_key):
+            ttl = cache.ttl(otp_key) or 0
+            return Response(
+                {"message": "OTP allaqachon yuborilgan.", "wait_seconds": ttl},
+                status=429,
+            )
+
+        delete_pending_key = DELETE_ACCOUNT_PENDING_KEY.format(phone=phone)
+        cache.set(delete_pending_key, True, timeout=OTP_TTL)
+        send_sms_otp.apply_async(args=[phone], countdown=1)
+
+        return Response(
+            {"status": True, "message": "Tasdiqlash kodi yuborildi. 5 daqiqa ichida tasdiqlang."},
+            status=200,
+        )
+
+
+class DeleteAccountConfirmView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @swagger_auto_schema(request_body=DeleteAccountConfirmSerializer, tags=["Auth"])
+    def post(self, request, *args, **kwargs):
+        serializer = DeleteAccountConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        phone = serializer.validated_data['phone']
+        code = serializer.validated_data['code']
+
+        if phone != user.phone:
+            return Response({"message": "Telefon raqam login foydalanuvchiga mos emas."}, status=400)
+
+        delete_pending_key = DELETE_ACCOUNT_PENDING_KEY.format(phone=phone)
+        if not cache.get(delete_pending_key):
+            return Response({"message": "Avval account o'chirish uchun so'rov yuboring."}, status=400)
+
+        otp_key = OTP_KEY.format(phone=phone)
+        cached_code = cache.get(otp_key)
+        if not cached_code or cached_code != code:
+            return Response({"message": "Kod noto'g'ri yoki muddati o'tgan."}, status=400)
+
+        cache.delete(otp_key)
+        cache.delete(delete_pending_key)
+
+        user.is_active = False
+        user.save()
+
+        return Response({"status": True, "message": "Hisob muvaffaqiyatli o'chirildi."}, status=200)
