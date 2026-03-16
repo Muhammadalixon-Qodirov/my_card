@@ -27,7 +27,7 @@ class SignInSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('phone', 'first_name', 'last_name', 'gender', 'birth_date', 'is_active', 'is_staff', 'date_joined', 'last_login')
+        fields = ('phone', 'first_name', 'last_name', 'gender', 'birth_date', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile_image')
         read_only_fields = ('phone', 'is_active', 'is_staff', 'date_joined', 'last_login')
 
 
@@ -83,3 +83,14 @@ class OTPLoginSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    new_password_confirm = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password_confirm']:
+            raise serializers.ValidationError("Yangi parol va parol tasdiqlash mos kelmadi.")
+        return data

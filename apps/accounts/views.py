@@ -14,6 +14,7 @@ from .serializers import (
     SignInSerializer, UserProfileSerializer,
     RegisterSerializer, OTPVerifySerializer,
     OTPLoginSerializer, LogoutSerializer,
+    PasswordChangeSerializer
 )
 
 
@@ -171,3 +172,23 @@ class LogoutView(APIView):
         except TokenError:
             return Response({"message": "Token yaroqsiz yoki allaqachon bekor qilingan."}, status=400)
         return Response({"status": True, "message": "Muvaffaqiyatli chiqildi."}, status=205)
+
+
+class PasswordChangeView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PasswordChangeSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        old_password = serializer.validated_data['old_password']
+        new_password = serializer.validated_data['new_password']
+
+        if not user.check_password(old_password):
+            return Response({"message": "Eski parol noto'g'ri."}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"status": True, "message": "Parol muvaffaqiyatli o'zgartirildi."}, status=200)

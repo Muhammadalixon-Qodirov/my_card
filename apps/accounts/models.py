@@ -10,6 +10,7 @@ class CustomUser(AbstractUser):
         ('male', "Erkak"),
         ('female', "Ayol"),
     )
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
     first_name = models.CharField(max_length=50, db_index=True)
     last_name = models.CharField(max_length=50, blank=True, null=True)
     gender = models.CharField(max_length=10, choices=gender, blank=True, null=True)
