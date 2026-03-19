@@ -22,10 +22,38 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ModuleSerializer(serializers.ModelSerializer):
+    progress_percent = serializers.SerializerMethodField()
+
     class Meta:
         model = Module
-        fields = ("id", "name", "description", "category", "owner", "created_at")
+        fields = ("id", "name", "description", "category", "owner", "created_at", "progress_percent")
         read_only_fields = ("id", "owner", "created_at")
+
+    def get_progress_percent(self, obj):
+        total_data_cards = max(getattr(obj, "total_data_cards", 0) or 0, 0)
+        completed_data_cards = max(getattr(obj, "completed_data_cards", 0) or 0, 0)
+        total_tests = max(getattr(obj, "total_tests", 0) or 0, 0)
+        answered_tests = max(getattr(obj, "answered_tests", 0) or 0, 0)
+        wrong_answered_tests = max(getattr(obj, "wrong_answered_tests", 0) or 0, 0)
+
+        if total_data_cards == 0:
+            return 0
+
+        completed_data_cards = min(completed_data_cards, total_data_cards)
+        reading_progress_percent = int((completed_data_cards * 50) / total_data_cards)
+        is_reading_completed = completed_data_cards == total_data_cards
+
+        if not is_reading_completed:
+            return reading_progress_percent
+
+        if total_tests == 0:
+            return 50
+
+        is_test_fully_completed = answered_tests >= total_tests and wrong_answered_tests == 0
+        if is_test_fully_completed:
+            return 100
+
+        return 50
 
 
 class PlanSerializer(serializers.ModelSerializer):

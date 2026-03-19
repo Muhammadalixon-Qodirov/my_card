@@ -1,14 +1,11 @@
 from rest_framework import permissions, viewsets
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 
 from .models import (
-	Category,
-	Module,
-	Plan,
-	DataCard,
-	ModuleLog,
-	DataCardLog,
-	Test,
-	TestAnswer,
+	Category, Module, Plan,
+	DataCard, ModuleLog, DataCardLog,
+	Test, TestAnswer
 )
 from .serializers import (
 	CategorySerializer, ModuleSerializer,
@@ -32,9 +29,69 @@ class CategoryViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 
 
 class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
-	queryset = Module.objects.select_related("category", "owner").all()
 	serializer_class = ModuleSerializer
 	permission_classes = (IsSuperUserForWrite,)
+
+	def get_queryset(self):
+		queryset = Module.objects.select_related("category", "owner")
+
+		if not self.request.user or not self.request.user.is_authenticated:
+			return queryset.annotate(
+				total_data_cards=Value(0, output_field=IntegerField()),
+				completed_data_cards=Value(0, output_field=IntegerField()),
+				total_tests=Value(0, output_field=IntegerField()),
+				answered_tests=Value(0, output_field=IntegerField()),
+				wrong_answered_tests=Value(0, output_field=IntegerField()),
+			)
+
+		total_data_cards_subquery = DataCard.objects.filter(
+			module_id=OuterRef("pk")
+		).values("module_id").annotate(
+			count=Count("id")
+		).values("count")[:1]
+
+		completed_data_cards_subquery = DataCardLog.objects.filter(
+			data_card__module_id=OuterRef("pk"),
+			user=self.request.user,
+			is_completed=True,
+		).values("data_card__module_id").annotate(
+			count=Count("data_card_id", distinct=True)
+		).values("count")[:1]
+
+		total_tests_subquery = Test.objects.filter(
+			module_id=OuterRef("pk")
+		).values("module_id").annotate(
+			count=Count("id")
+		).values("count")[:1]
+
+		answered_tests_subquery = TestAnswer.objects.filter(
+			test__module_id=OuterRef("pk"),
+			user=self.request.user,
+		).values("test__module_id").annotate(
+			count=Count("test_id", distinct=True)
+		).values("count")[:1]
+
+		wrong_answered_tests_subquery = TestAnswer.objects.filter(
+			test__module_id=OuterRef("pk"),
+			user=self.request.user,
+			is_correct=False,
+		).values("test__module_id").annotate(
+			count=Count("test_id", distinct=True)
+		).values("count")[:1]
+
+		return queryset.annotate(
+			total_data_cards=Coalesce(Subquery(total_data_cards_subquery, output_field=IntegerField()), Value(0)),
+			completed_data_cards=Coalesce(
+				Subquery(completed_data_cards_subquery, output_field=IntegerField()),
+				Value(0),
+			),
+			total_tests=Coalesce(Subquery(total_tests_subquery, output_field=IntegerField()), Value(0)),
+			answered_tests=Coalesce(Subquery(answered_tests_subquery, output_field=IntegerField()), Value(0)),
+			wrong_answered_tests=Coalesce(
+				Subquery(wrong_answered_tests_subquery, output_field=IntegerField()),
+				Value(0),
+			),
+		)
 
 
 class PlanViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
