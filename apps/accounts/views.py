@@ -29,7 +29,7 @@ DELETE_ACCOUNT_PENDING_KEY = 'delete_account_pending:{phone}'
 class SignInView(APIView):
     permission_classes = (AllowAny,)
 
-    @swagger_auto_schema(request_body=SignInSerializer)
+    @swagger_auto_schema(request_body=SignInSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
         serializer = SignInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -44,7 +44,7 @@ class SignInView(APIView):
 
 
 class MyProfileView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, )
 
     @swagger_auto_schema(responses={200: UserProfileSerializer})
     def get(self, request, *args, **kwargs):
@@ -139,7 +139,7 @@ class OTPVerifyView(APIView):
 class OTPLoginView(APIView):
     permission_classes = (AllowAny,)
 
-    @swagger_auto_schema(request_body=OTPLoginSerializer, tags=["OTP"])
+    @swagger_auto_schema(request_body=OTPLoginSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
         serializer = OTPLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -199,7 +199,7 @@ class PasswordChangeView(APIView):
 class DeleteAccountRequestView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    @swagger_auto_schema(request_body=DeleteAccountRequestSerializer, tags=["Auth"])
+    @swagger_auto_schema(request_body=DeleteAccountRequestSerializer)
     def post(self, request, *args, **kwargs):
         serializer = DeleteAccountRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -232,7 +232,7 @@ class DeleteAccountRequestView(APIView):
 class DeleteAccountConfirmView(APIView):
     permission_classes = (IsAuthenticated,)
 
-    @swagger_auto_schema(request_body=DeleteAccountConfirmSerializer, tags=["Auth"])
+    @swagger_auto_schema(request_body=DeleteAccountConfirmSerializer)
     def post(self, request, *args, **kwargs):
         serializer = DeleteAccountConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

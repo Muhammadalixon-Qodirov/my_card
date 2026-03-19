@@ -1,16 +1,10 @@
 from rest_framework import serializers
 
 from .models import (
-    Category,
-    Module,
-    Plan,
-    DataCard,
-    DataCardMedia,
-    ModuleLog,
-    DataCardLog,
-    Test,
-    TestOption,
-    TestAnswer,
+    Category, Module, Plan,
+    DataCard, DataCardMedia, ModuleLog,
+    DataCardLog, Test, TestOption,
+    TestAnswer
 )
 
 
