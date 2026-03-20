@@ -13,6 +13,9 @@ class NewsViewSet(viewsets.ModelViewSet):
     permission_classes = (IsSuperUserForWrite,)
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return News.objects.none()
+
         views_count_subquery = (
             NewsLog.objects.filter(
                 news_id=OuterRef("pk"),
@@ -61,7 +64,7 @@ class NewsViewSet(viewsets.ModelViewSet):
 class NewsLogViewSet(viewsets.ModelViewSet):
     serializer_class = NewsLogSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    http_method_names = ("get", "post", "head", "options")
+    http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
