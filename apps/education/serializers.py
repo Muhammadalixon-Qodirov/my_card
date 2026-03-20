@@ -191,26 +191,6 @@ class TestAnswerSerializer(serializers.ModelSerializer):
         fields = ("id", "test", "user", "selected_option", "is_correct", "timestamp")
         read_only_fields = ("id", "user", "is_correct", "timestamp")
 
-
-class ScoreSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Score
-        fields = ("id", "user", "module", "score", "created_at", "updated_at")
-        read_only_fields = ("id", "user", "created_at", "updated_at")
-
-
-class RatingUserSerializer(serializers.ModelSerializer):
-    total_score = serializers.IntegerField(read_only=True)
-    rank = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
-
-
-class RatingSerializer(RatingUserSerializer):
-    pass
-
     def validate(self, attrs):
         test = attrs.get("test")
         selected_option = attrs.get("selected_option")
@@ -250,3 +230,23 @@ class RatingSerializer(RatingUserSerializer):
         selected_option = validated_data.get("selected_option", instance.selected_option)
         validated_data["is_correct"] = selected_option.is_correct
         return super().update(instance, validated_data)
+
+
+class ScoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Score
+        fields = ("id", "user", "module", "score", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "score", "created_at", "updated_at")
+
+
+class RatingUserSerializer(serializers.ModelSerializer):
+    total_score = serializers.IntegerField(read_only=True)
+    rank = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
+
+
+class RatingSerializer(RatingUserSerializer):
+    pass

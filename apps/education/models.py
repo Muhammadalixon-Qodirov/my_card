@@ -26,6 +26,8 @@ class Module(models.Model):
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="modules")
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="modules")
+    score = models.IntegerField(default=0)
+    coin = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -181,6 +183,7 @@ class Score(models.Model):
         verbose_name = "Score"
         verbose_name_plural = "Scores"
         ordering = ["-updated_at"]
+        unique_together = ("user", "module")
 
     def __str__(self):
         return f"{self.user.phone} - Score for {self.module.name}: {self.score}"

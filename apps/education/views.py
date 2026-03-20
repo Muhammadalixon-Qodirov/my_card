@@ -1,6 +1,7 @@
 from rest_framework import permissions, viewsets
 from rest_framework.generics import ListAPIView
-from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum
+from django.db import transaction
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum, Q
 from django.db.models.functions import Coalesce, DenseRank
 
 from .models import (
@@ -171,6 +172,60 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 		if not self.request.user.is_authenticated:
 			return TestAnswer.objects.none()
 		return TestAnswer.objects.select_related("test", "selected_option", "user").filter(user=self.request.user)
+
+	@transaction.atomic
+	def perform_create(self, serializer):
+		answer = serializer.save(user=self.request.user)
+		self._try_award_rewards(answer)
+
+	def _try_award_rewards(self, answer):
+		from apps.wallet.models import CoinTransaction
+
+		user = answer.user
+		module = answer.test.module
+
+		# Allaqachon mukofot berilgan bo'lsa — o'tkazib yuboramiz (faqat bir marta)
+		if Score.objects.filter(user=user, module=module).exists():
+			return
+
+		total_tests = module.tests.filter(is_active=True).count()
+		if total_tests == 0:
+			return
+
+		# Foydalanuvchi javob bergan noyob test soni
+		answered_count = (
+			TestAnswer.objects.filter(user=user, test__module=module)
+			.values("test_id")
+			.distinct()
+			.count()
+		)
+
+		# Barcha testlarga javob berilgandagina mukofot beriladi
+		if answered_count < total_tests:
+			return
+
+		correct_count = (
+			TestAnswer.objects.filter(user=user, test__module=module, is_correct=True)
+			.values("test_id")
+			.distinct()
+			.count()
+		)
+
+		score_earned = int((correct_count / total_tests) * module.score)
+		coin_earned = int((correct_count / total_tests) * module.coin)
+
+		# Score saqlash
+		Score.objects.create(user=user, module=module, score=score_earned)
+
+		# Coin tranzaksiyasi — faqat coin > 0 bo'lsa
+		if coin_earned > 0:
+			CoinTransaction.objects.create(
+				user=user,
+				amount=coin_earned,
+				transaction_type=CoinTransaction.EARN,
+				module=module,
+				description=f"{module.name} modulini tugatganlik uchun",
+			)
 
 
 
