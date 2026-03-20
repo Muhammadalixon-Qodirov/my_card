@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
+from apps.accounts.models import CustomUser
 from .models import (
     Category, Module, Plan,
     DataCard, DataCardMedia, ModuleLog,
     DataCardLog, Test, TestOption,
-    TestAnswer
+    TestAnswer, Score
 )
 
 
@@ -189,6 +190,26 @@ class TestAnswerSerializer(serializers.ModelSerializer):
         model = TestAnswer
         fields = ("id", "test", "user", "selected_option", "is_correct", "timestamp")
         read_only_fields = ("id", "user", "is_correct", "timestamp")
+
+
+class ScoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Score
+        fields = ("id", "user", "module", "score", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "created_at", "updated_at")
+
+
+class RatingUserSerializer(serializers.ModelSerializer):
+    total_score = serializers.IntegerField(read_only=True)
+    rank = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
+
+
+class RatingSerializer(RatingUserSerializer):
+    pass
 
     def validate(self, attrs):
         test = attrs.get("test")

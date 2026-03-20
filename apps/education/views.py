@@ -1,20 +1,22 @@
 from rest_framework import permissions, viewsets
-from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
-from django.db.models.functions import Coalesce
+from rest_framework.generics import ListAPIView
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum
+from django.db.models.functions import Coalesce, DenseRank
 
 from .models import (
 	Category, Module, Plan,
 	DataCard, ModuleLog, DataCardLog,
-	Test, TestAnswer
+	Test, TestAnswer, Score
 )
 from .serializers import (
 	CategorySerializer, ModuleSerializer,
 	PlanSerializer, DataCardSerializer,
 	ModuleLogSerializer, DataCardLogSerializer,
 	TestSerializer, TestAnswerSerializer,
+	ScoreSerializer, RatingSerializer,
 )
-from .permissions import IsSuperUserForWrite
-
+from .paginations import RatingPagination
+from .permissions import IsSuperUserForWrite, IsScoreOwner
 
 
 class OwnerCreateMixin:
@@ -169,3 +171,40 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 		if not self.request.user.is_authenticated:
 			return TestAnswer.objects.none()
 		return TestAnswer.objects.select_related("test", "selected_option", "user").filter(user=self.request.user)
+
+
+
+class ScoreViewSet(viewsets.ModelViewSet):
+	serializer_class = ScoreSerializer
+	permission_classes = (IsScoreOwner,)
+
+	def get_queryset(self):
+		if getattr(self, "swagger_fake_view", False):
+			return Score.objects.none()
+		return Score.objects.select_related("user", "module").all()
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+
+
+class RatingListView(ListAPIView):
+	serializer_class = RatingSerializer
+	permission_classes = (permissions.IsAuthenticated,)
+	pagination_class = RatingPagination
+
+	def get_queryset(self):
+		if getattr(self, "swagger_fake_view", False):
+			return Score.objects.none()
+		from apps.accounts.models import CustomUser
+		return (
+			CustomUser.objects.filter(scores__isnull=False)
+			.annotate(total_score=Coalesce(Sum("scores__score"), Value(0)))
+			.annotate(
+				rank=Window(
+					expression=DenseRank(),
+					order_by=F("total_score").desc(),
+				)
+			)
+			.order_by("-total_score", "id")
+		)
