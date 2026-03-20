@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum, Q
 from django.db.models.functions import Coalesce, DenseRank
 
+from apps.accounts.models import CustomUser
 from .models import (
 	Category, Module, Plan,
 	DataCard, ModuleLog, DataCardLog,
@@ -14,7 +15,7 @@ from .serializers import (
 	PlanSerializer, DataCardSerializer,
 	ModuleLogSerializer, DataCardLogSerializer,
 	TestSerializer, TestAnswerSerializer,
-	ScoreSerializer, RatingSerializer,
+	ScoreSerializer, RatingUserSerializer
 )
 from .paginations import RatingPagination
 from .permissions import IsSuperUserForWrite, IsScoreOwner
@@ -171,7 +172,7 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 			return TestAnswer.objects.none()
 		if not self.request.user.is_authenticated:
 			return TestAnswer.objects.none()
-		return TestAnswer.objects.select_related("test", "selected_option", "user").filter(user=self.request.user)
+		return TestAnswer.objects.select_related("test__module", "selected_option", "user").filter(user=self.request.user)
 
 	@transaction.atomic
 	def perform_create(self, serializer):
@@ -192,24 +193,22 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 		if total_tests == 0:
 			return
 
-		# Foydalanuvchi javob bergan noyob test soni
-		answered_count = (
+		# Bitta so'rovda ham answered, ham correct sonini olamiz
+		result = (
 			TestAnswer.objects.filter(user=user, test__module=module)
 			.values("test_id")
 			.distinct()
-			.count()
+			.aggregate(
+				answered=Count("test_id"),
+				correct=Count("test_id", filter=Q(is_correct=True)),
+			)
 		)
+		answered_count = result["answered"] or 0
+		correct_count = result["correct"] or 0
 
 		# Barcha testlarga javob berilgandagina mukofot beriladi
 		if answered_count < total_tests:
 			return
-
-		correct_count = (
-			TestAnswer.objects.filter(user=user, test__module=module, is_correct=True)
-			.values("test_id")
-			.distinct()
-			.count()
-		)
 
 		score_earned = int((correct_count / total_tests) * module.score)
 		coin_earned = int((correct_count / total_tests) * module.coin)
@@ -236,7 +235,9 @@ class ScoreViewSet(viewsets.ModelViewSet):
 	def get_queryset(self):
 		if getattr(self, "swagger_fake_view", False):
 			return Score.objects.none()
-		return Score.objects.select_related("user", "module").all()
+		if self.request.user.is_superuser:
+			return Score.objects.select_related("user", "module").all()
+		return Score.objects.select_related("user", "module").filter(user=self.request.user)
 
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user)
@@ -244,14 +245,13 @@ class ScoreViewSet(viewsets.ModelViewSet):
 
 
 class RatingListView(ListAPIView):
-	serializer_class = RatingSerializer
+	serializer_class = RatingUserSerializer
 	permission_classes = (permissions.IsAuthenticated,)
 	pagination_class = RatingPagination
 
 	def get_queryset(self):
 		if getattr(self, "swagger_fake_view", False):
 			return Score.objects.none()
-		from apps.accounts.models import CustomUser
 		return (
 			CustomUser.objects.filter(scores__isnull=False)
 			.annotate(total_score=Coalesce(Sum("scores__score"), Value(0)))

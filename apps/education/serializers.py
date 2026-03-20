@@ -246,7 +246,3 @@ class RatingUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
-
-
-class RatingSerializer(RatingUserSerializer):
-    pass
