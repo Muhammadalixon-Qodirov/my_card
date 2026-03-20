@@ -11,16 +11,18 @@ from .models import (
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ("id", "name", "description", "owner", "created_at")
+        fields = ("id", "name", "image", "description", "owner", "created_at")
         read_only_fields = ("id", "owner", "created_at")
 
 
 class ModuleSerializer(serializers.ModelSerializer):
     progress_percent = serializers.SerializerMethodField()
+    users_completed = serializers.IntegerField(read_only=True, default=0)
+    users_in_progress = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Module
-        fields = ("id", "name", "description", "category", "owner", "created_at", "progress_percent")
+        fields = ("id", "name", "description", "category", "owner", "created_at", "progress_percent", "users_completed", "users_in_progress")
         read_only_fields = ("id", "owner", "created_at")
 
     def get_progress_percent(self, obj):
@@ -77,6 +79,7 @@ class DataCardSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "audio",
             "description",
             "module",
             "plan",

@@ -5,6 +5,7 @@ from apps.accounts.models import CustomUser
 
 # Create your models here.
 class Category(models.Model):
+    image = models.ImageField(upload_to="category_images/", blank=True, null=True)
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, null=True)
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="categories")
@@ -55,6 +56,7 @@ class Plan(models.Model):
 
 # DataCard model
 class DataCard(models.Model):
+    audio = models.FileField(upload_to="data_card_audio/", blank=True, null=True)
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, null=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="data_cards")

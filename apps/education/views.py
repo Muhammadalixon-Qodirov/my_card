@@ -42,6 +42,8 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 				total_tests=Value(0, output_field=IntegerField()),
 				answered_tests=Value(0, output_field=IntegerField()),
 				wrong_answered_tests=Value(0, output_field=IntegerField()),
+				users_completed=Value(0, output_field=IntegerField()),
+				users_in_progress=Value(0, output_field=IntegerField()),
 			)
 
 		total_data_cards_subquery = DataCard.objects.filter(
@@ -79,6 +81,20 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 			count=Count("test_id", distinct=True)
 		).values("count")[:1]
 
+		users_completed_subquery = ModuleLog.objects.filter(
+			module_id=OuterRef("pk"),
+			is_completed=True,
+		).values("module_id").annotate(
+			count=Count("user_id", distinct=True)
+		).values("count")[:1]
+
+		users_in_progress_subquery = ModuleLog.objects.filter(
+			module_id=OuterRef("pk"),
+			is_completed=False,
+		).values("module_id").annotate(
+			count=Count("user_id", distinct=True)
+		).values("count")[:1]
+
 		return queryset.annotate(
 			total_data_cards=Coalesce(Subquery(total_data_cards_subquery, output_field=IntegerField()), Value(0)),
 			completed_data_cards=Coalesce(
@@ -91,6 +107,8 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 				Subquery(wrong_answered_tests_subquery, output_field=IntegerField()),
 				Value(0),
 			),
+			users_completed=Coalesce(Subquery(users_completed_subquery, output_field=IntegerField()), Value(0)),
+			users_in_progress=Coalesce(Subquery(users_in_progress_subquery, output_field=IntegerField()), Value(0)),
 		)
 
 
