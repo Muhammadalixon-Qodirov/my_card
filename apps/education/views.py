@@ -1,7 +1,7 @@
 from rest_framework import permissions, viewsets
 from rest_framework.generics import ListAPIView
 from django.db import transaction
-from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum, Q
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, F, Window, Sum
 from django.db.models.functions import Coalesce, DenseRank
 
 from apps.accounts.models import CustomUser
@@ -45,12 +45,7 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 				completed_data_cards=Value(0, output_field=IntegerField()),
 				total_tests=Value(0, output_field=IntegerField()),
 				answered_tests=Value(0, output_field=IntegerField()),
-				wrong_answered_tests=Value(0, output_field=IntegerField()),
-				users_completed=Value(0, output_field=IntegerField()),
-				users_in_progress=Value(0, output_field=IntegerField()),
-			)
-
-		total_data_cards_subquery = DataCard.objects.filter(
+			correctly_answered_tests=Value(0, output_field=IntegerField()),
 			module_id=OuterRef("pk")
 		).values("module_id").annotate(
 			count=Count("id")
@@ -77,10 +72,10 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 			count=Count("test_id", distinct=True)
 		).values("count")[:1]
 
-		wrong_answered_tests_subquery = TestAnswer.objects.filter(
+		correctly_answered_tests_subquery = TestAnswer.objects.filter(
 			test__module_id=OuterRef("pk"),
 			user=self.request.user,
-			is_correct=False,
+			is_correct=True,
 		).values("test__module_id").annotate(
 			count=Count("test_id", distinct=True)
 		).values("count")[:1]
@@ -107,8 +102,8 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 			),
 			total_tests=Coalesce(Subquery(total_tests_subquery, output_field=IntegerField()), Value(0)),
 			answered_tests=Coalesce(Subquery(answered_tests_subquery, output_field=IntegerField()), Value(0)),
-			wrong_answered_tests=Coalesce(
-				Subquery(wrong_answered_tests_subquery, output_field=IntegerField()),
+			correctly_answered_tests=Coalesce(
+				Subquery(correctly_answered_tests_subquery, output_field=IntegerField()),
 				Value(0),
 			),
 			users_completed=Coalesce(Subquery(users_completed_subquery, output_field=IntegerField()), Value(0)),
@@ -193,18 +188,19 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 		if total_tests == 0:
 			return
 
-		# Bitta so'rovda ham answered, ham correct sonini olamiz
-		result = (
+		# Har bir test uchun javob berilganini va to'g'riligini alohida hisoblaymiz
+		answered_count = (
 			TestAnswer.objects.filter(user=user, test__module=module)
 			.values("test_id")
 			.distinct()
-			.aggregate(
-				answered=Count("test_id"),
-				correct=Count("test_id", filter=Q(is_correct=True)),
-			)
+			.count()
 		)
-		answered_count = result["answered"] or 0
-		correct_count = result["correct"] or 0
+		correct_count = (
+			TestAnswer.objects.filter(user=user, test__module=module, is_correct=True)
+			.values("test_id")
+			.distinct()
+			.count()
+		)
 
 		# Barcha testlarga javob berilgandagina mukofot beriladi
 		if answered_count < total_tests:
@@ -225,6 +221,13 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 				module=module,
 				description=f"{module.name} modulini tugatganlik uchun",
 			)
+
+		# ModuleLog ni tugatilgan deb belgilaymiz
+		ModuleLog.objects.update_or_create(
+			user=user,
+			module=module,
+			defaults={"is_completed": True},
+		)
 
 
 

@@ -31,7 +31,7 @@ class ModuleSerializer(serializers.ModelSerializer):
         completed_data_cards = max(getattr(obj, "completed_data_cards", 0) or 0, 0)
         total_tests = max(getattr(obj, "total_tests", 0) or 0, 0)
         answered_tests = max(getattr(obj, "answered_tests", 0) or 0, 0)
-        wrong_answered_tests = max(getattr(obj, "wrong_answered_tests", 0) or 0, 0)
+        correctly_answered_tests = max(getattr(obj, "correctly_answered_tests", 0) or 0, 0)
 
         if total_data_cards == 0:
             return 0
@@ -46,7 +46,7 @@ class ModuleSerializer(serializers.ModelSerializer):
         if total_tests == 0:
             return 50
 
-        is_test_fully_completed = answered_tests >= total_tests and wrong_answered_tests == 0
+        is_test_fully_completed = answered_tests >= total_tests and correctly_answered_tests >= total_tests
         if is_test_fully_completed:
             return 100
 
