@@ -45,7 +45,12 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 				completed_data_cards=Value(0, output_field=IntegerField()),
 				total_tests=Value(0, output_field=IntegerField()),
 				answered_tests=Value(0, output_field=IntegerField()),
-			correctly_answered_tests=Value(0, output_field=IntegerField()),
+				correctly_answered_tests=Value(0, output_field=IntegerField()),
+				users_completed=Value(0, output_field=IntegerField()),
+				users_in_progress=Value(0, output_field=IntegerField()),
+			)
+
+		total_data_cards_subquery = DataCard.objects.filter(
 			module_id=OuterRef("pk")
 		).values("module_id").annotate(
 			count=Count("id")
