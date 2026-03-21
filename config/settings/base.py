@@ -33,6 +33,7 @@ LOCAL_APPS = [
     "apps.education.apps.EducationConfig",
     "apps.news.apps.NewsConfig",
     "apps.wallet.apps.WalletConfig",
+    "apps.society.apps.SocietyConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -237,6 +238,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Tashkent"
+
+# Har kuni soat 00:05 da muddati tugagan tanlovlarni avtomatik yopadi
+CELERY_BEAT_SCHEDULE = {
+    "close-expired-choices-daily": {
+        "task": "society.close_expired_choices",
+        "schedule": timedelta(hours=24),
+    },
+}
+
 
 
 ESKIZ_EMAIL = config("ESKIZ_EMAIL")

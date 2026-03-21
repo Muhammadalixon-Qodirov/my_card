@@ -11,6 +11,7 @@ from .models import (
 	Test,
 	TestOption,
 	TestAnswer,
+	Score,
 )
 
 
@@ -80,3 +81,12 @@ class TestAnswerAdmin(admin.ModelAdmin):
 	list_display = ("id", "test", "user", "selected_option", "is_correct", "timestamp")
 	list_filter = ("is_correct", "timestamp", "test")
 	search_fields = ("test__question", "user__phone", "selected_option__option")
+
+
+@admin.register(Score)
+class ScoreAdmin(admin.ModelAdmin):
+	list_display = ("id", "user", "module", "score", "created_at", "updated_at")
+	list_filter = ("module", "created_at")
+	search_fields = ("user__phone", "module__name")
+	readonly_fields = ("created_at", "updated_at")
+	ordering = ("-updated_at",)
