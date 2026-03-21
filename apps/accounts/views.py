@@ -10,6 +10,7 @@ from .tokens import get_tokens_for_user
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import UserDevice
 from .serializers import (
     SignInSerializer, UserProfileSerializer,
     RegisterSerializer, OTPVerifySerializer,
@@ -17,6 +18,7 @@ from .serializers import (
     PasswordChangeSerializer,
     DeleteAccountRequestSerializer,
     DeleteAccountConfirmSerializer,
+    UserDeviceSerializer,
 )
 
 
@@ -260,3 +262,42 @@ class DeleteAccountConfirmView(APIView):
         user.save()
 
         return Response({"status": True, "message": "Hisob muvaffaqiyatli o'chirildi."}, status=200)
+
+
+class UserDeviceView(APIView):
+    """
+    FCM qurilma tokenini ro'yxatdan o'tkazish yoki o'chirish.
+
+    - POST   /accounts/devices/         - Token saqlash / yangilash
+    - DELETE /accounts/devices/         - Joriy tokenni o'chirish (logout paytida)
+    """
+    permission_classes = (IsAuthenticated,)
+
+    @swagger_auto_schema(request_body=UserDeviceSerializer, tags=["Devices"])
+    def post(self, request):
+        token = request.data.get("fcm_token", "").strip()
+        device_type = request.data.get("device_type", "android")
+
+        if not token:
+            return Response({"detail": "fcm_token majburiy."}, status=400)
+
+        # Agar boshqa userda bo'lsa — uni nofaol qilamiz
+        UserDevice.objects.filter(fcm_token=token).exclude(user=request.user).update(is_active=False)
+
+        device, created = UserDevice.objects.update_or_create(
+            fcm_token=token,
+            defaults={"user": request.user, "device_type": device_type, "is_active": True},
+        )
+        serializer = UserDeviceSerializer(device)
+        status_code = 201 if created else 200
+        return Response(serializer.data, status=status_code)
+
+    @swagger_auto_schema(tags=["Devices"])
+    def delete(self, request):
+        token = request.data.get("fcm_token", "").strip()
+        if not token:
+            return Response({"detail": "fcm_token majburiy."}, status=400)
+        updated = UserDevice.objects.filter(user=request.user, fcm_token=token).update(is_active=False)
+        if not updated:
+            return Response({"detail": "Qurilma topilmadi."}, status=404)
+        return Response({"detail": "Qurilma o'chirildi."}, status=200)

@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from apps.core.validators import validate_phone_number
-from .models import CustomUser
+from .models import CustomUser, UserDevice
 
 
 
@@ -111,3 +111,15 @@ class DeleteAccountConfirmSerializer(serializers.Serializer):
         if not value.isdigit():
             raise serializers.ValidationError("Kod faqat raqamlardan iborat bo'lishi kerak.")
         return value
+
+
+class UserDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserDevice
+        fields = ("id", "fcm_token", "device_type", "is_active", "created_at")
+        read_only_fields = ("id", "is_active", "created_at")
+
+    def validate_fcm_token(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("FCM token bo'sh bo'lmasligi kerak.")
+        return value.strip()

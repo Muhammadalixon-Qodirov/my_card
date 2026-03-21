@@ -44,6 +44,15 @@ class ChoiceViewSet(viewsets.ModelViewSet):
         )
         serializer.save(owner=user)
 
+        # Notification (Celery orqali async)
+        from apps.notifications.tasks import send_choice_started
+        choice_name = serializer.validated_data["name"]
+        send_choice_started.delay(
+            choice_id=serializer.instance.pk,
+            choice_name=choice_name,
+            owner_id=user.pk,
+        )
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)

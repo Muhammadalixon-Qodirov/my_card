@@ -66,6 +66,17 @@ def close_choice(choice):
         choice.ended_at = ended_at
     choice.save(update_fields=["is_active", "ended_at", "winner"])
 
+    # Notification (Celery orqali async)
+    from apps.notifications.tasks import send_choice_ended
+    member_ids = [m.user_id for m in members]
+    send_choice_ended.delay(
+        choice_id=choice.pk,
+        choice_name=choice.name,
+        winner_id=best_member.user_id if best_member else None,
+        member_ids=member_ids,
+        award=choice.award,
+    )
+
 
 @shared_task(name="society.close_expired_choices")
 def close_expired_choices():

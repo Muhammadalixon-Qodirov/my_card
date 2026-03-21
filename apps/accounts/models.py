@@ -5,6 +5,12 @@ from .managers import UserManager
 from apps.core.validators import validate_phone_number
 
 
+class DeviceType(models.TextChoices):
+    ANDROID = "android", "Android"
+    IOS = "ios", "iOS"
+    WEB = "web", "Web"
+
+
 class CustomUser(AbstractUser):
     gender = (
         ('male', "Erkak"),
@@ -34,3 +40,20 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.phone
+
+
+class UserDevice(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="devices")
+    fcm_token = models.TextField(unique=True)
+    device_type = models.CharField(max_length=10, choices=DeviceType.choices, default=DeviceType.ANDROID)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Qurilma"
+        verbose_name_plural = "Qurilmalar"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.phone} | {self.device_type} | {'faol' if self.is_active else 'nofaol'}"

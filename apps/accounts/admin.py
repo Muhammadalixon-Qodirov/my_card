@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import CustomUser
+from .models import CustomUser, UserDevice
 
 
 @admin.register(CustomUser)
@@ -25,4 +25,15 @@ class CustomUserAdmin(UserAdmin):
             "fields": ("phone", "first_name", "password1", "password2", "is_staff", "is_active"),
         }),
     )
+
+
+@admin.register(UserDevice)
+class UserDeviceAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "device_type", "is_active", "created_at")
+    list_filter = ("device_type", "is_active")
+    search_fields = ("user__phone",)
+    readonly_fields = ("created_at", "updated_at")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user")
 

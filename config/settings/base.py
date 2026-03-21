@@ -35,6 +35,7 @@ LOCAL_APPS = [
     "apps.news.apps.NewsConfig",
     "apps.wallet.apps.WalletConfig",
     "apps.society.apps.SocietyConfig",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -253,6 +254,10 @@ CELERY_BEAT_SCHEDULE = {
 ESKIZ_EMAIL = config("ESKIZ_EMAIL")
 ESKIZ_PASSWORD = config("ESKIZ_PASSWORD")
 ESKIZ_SENDER_NAME = "4546"
+
+# Firebase Cloud Messaging
+# Service account JSON faylining to'liq yo'li
+FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=None)
 
 
 LOG_DIR = BASE_DIR / "logs"

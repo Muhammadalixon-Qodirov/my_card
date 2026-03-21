@@ -8,6 +8,7 @@ from .views import (
     PasswordChangeView,
     DeleteAccountRequestView,
     DeleteAccountConfirmView,
+    UserDeviceView,
 )
 
 
@@ -22,6 +23,7 @@ urlpatterns = [
 
     path('register/', RegisterView.as_view(), name='register'),
     path('otp/verify/', OTPVerifyView.as_view(), name='otp-verify'),
-
     path('otp/login/', OTPLoginView.as_view(), name='otp-login'),
+
+    path('devices/', UserDeviceView.as_view(), name='user-devices'),
 ]
