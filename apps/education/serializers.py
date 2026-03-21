@@ -23,7 +23,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Module
-        fields = ("id", "name", "description", "category", "owner", "created_at", "progress_percent", "users_completed", "users_in_progress")
+        fields = ("id", "name", "description", "category", "owner", "coin", "score", "created_at", "progress_percent", "users_completed", "users_in_progress")
         read_only_fields = ("id", "owner", "created_at")
 
     def get_progress_percent(self, obj):
