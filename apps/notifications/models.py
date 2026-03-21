@@ -32,4 +32,5 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.user.phone} | {self.get_notification_type_display()} | {'o\'qilgan' if self.is_read else 'yangi'}"
+        status = "o'qilgan" if self.is_read else "yangi"
+        return f"{self.user.phone} | {self.get_notification_type_display()} | {status}"
