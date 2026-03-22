@@ -33,3 +33,17 @@ class Notification(models.Model):
     def __str__(self):
         status = "o'qilgan" if self.is_read else "yangi"
         return f"{self.user.phone} | {self.get_notification_type_display()} | {status}"
+
+
+class EmergencyNotification(models.Model):
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Favqulodda bildirishnoma"
+        verbose_name_plural = "Favqulodda bildirishnomalar"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Favqulodda: {self.title}"

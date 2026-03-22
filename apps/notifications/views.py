@@ -2,8 +2,34 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Notification
-from .serializers import NotificationSerializer
+from .models import EmergencyNotification, Notification
+from .serializers import EmergencyNotificationSerializer, NotificationSerializer
+
+
+class IsSuperUserOrReadOnly(permissions.BasePermission):
+    """Yozish (create/update/delete) faqat superuser uchun, o'qish hammaga."""
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        return request.user and request.user.is_authenticated and request.user.is_superuser
+
+
+class EmergencyNotificationViewSet(viewsets.ModelViewSet):
+    """
+    Favqulodda bildirishnomalar.
+
+    - GET    /emergency-notifications/        - Ro'yxat (autentifikatsiya qilingan)
+    - GET    /emergency-notifications/{id}/   - Tafsilot (autentifikatsiya qilingan)
+    - POST   /emergency-notifications/        - Yaratish (faqat superuser)
+    - PUT    /emergency-notifications/{id}/   - To'liq yangilash (faqat superuser)
+    - PATCH  /emergency-notifications/{id}/   - Qisman yangilash (faqat superuser)
+    - DELETE /emergency-notifications/{id}/   - O'chirish (faqat superuser)
+    """
+
+    queryset = EmergencyNotification.objects.all()
+    serializer_class = EmergencyNotificationSerializer
+    permission_classes = (IsSuperUserOrReadOnly,)
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
