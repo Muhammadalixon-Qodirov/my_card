@@ -30,27 +30,24 @@ class ModuleSerializer(serializers.ModelSerializer):
         total_data_cards = max(getattr(obj, "total_data_cards", 0) or 0, 0)
         completed_data_cards = max(getattr(obj, "completed_data_cards", 0) or 0, 0)
         total_tests = max(getattr(obj, "total_tests", 0) or 0, 0)
-        answered_tests = max(getattr(obj, "answered_tests", 0) or 0, 0)
         correctly_answered_tests = max(getattr(obj, "correctly_answered_tests", 0) or 0, 0)
 
         if total_data_cards == 0:
             return 0
 
         completed_data_cards = min(completed_data_cards, total_data_cards)
-        reading_progress_percent = int((completed_data_cards * 50) / total_data_cards)
-        is_reading_completed = completed_data_cards == total_data_cards
+        reading_progress = int((completed_data_cards * 50) / total_data_cards)
 
-        if not is_reading_completed:
-            return reading_progress_percent
+        if completed_data_cards < total_data_cards:
+            return reading_progress
 
         if total_tests == 0:
             return 50
 
-        is_test_fully_completed = answered_tests >= total_tests and correctly_answered_tests >= total_tests
-        if is_test_fully_completed:
-            return 100
+        correctly_answered_tests = min(correctly_answered_tests, total_tests)
+        test_progress = int((correctly_answered_tests * 50) / total_tests)
 
-        return 50
+        return 50 + test_progress
 
 
 class PlanSerializer(serializers.ModelSerializer):

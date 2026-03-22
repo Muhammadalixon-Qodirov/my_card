@@ -33,7 +33,7 @@ class SignInView(APIView):
 
     @swagger_auto_schema(request_body=SignInSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
-        serializer = SignInSerializer(data=request.data)
+        serializer = SignInSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data['phone']
         password = serializer.validated_data['password']
@@ -50,12 +50,12 @@ class MyProfileView(APIView):
 
     @swagger_auto_schema(responses={200: UserProfileSerializer})
     def get(self, request, *args, **kwargs):
-        serializer = UserProfileSerializer(request.user)
+        serializer = UserProfileSerializer(request.user, context={"request": request})
         return Response(serializer.data, status=200)
 
     @swagger_auto_schema(request_body=UserProfileSerializer, responses={200: UserProfileSerializer})
     def put(self, request, *args, **kwargs):
-        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=200)
@@ -67,7 +67,7 @@ class RegisterView(APIView):
 
     @swagger_auto_schema(request_body=RegisterSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = RegisterSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data['phone']
@@ -101,7 +101,7 @@ class OTPVerifyView(APIView):
 
     @swagger_auto_schema(request_body=OTPVerifySerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
-        serializer = OTPVerifySerializer(data=request.data)
+        serializer = OTPVerifySerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data['phone']
@@ -143,7 +143,7 @@ class OTPLoginView(APIView):
 
     @swagger_auto_schema(request_body=OTPLoginSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
-        serializer = OTPLoginSerializer(data=request.data)
+        serializer = OTPLoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data['phone']
@@ -168,7 +168,7 @@ class LogoutView(APIView):
 
     @swagger_auto_schema(request_body=LogoutSerializer, tags=["Auth"])
     def post(self, request, *args, **kwargs):
-        serializer = LogoutSerializer(data=request.data)
+        serializer = LogoutSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         try:
             token = RefreshToken(serializer.validated_data['refresh'])
@@ -183,7 +183,7 @@ class PasswordChangeView(APIView):
     serializer_class = PasswordChangeSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         user = request.user
@@ -203,7 +203,7 @@ class DeleteAccountRequestView(APIView):
 
     @swagger_auto_schema(request_body=DeleteAccountRequestSerializer)
     def post(self, request, *args, **kwargs):
-        serializer = DeleteAccountRequestSerializer(data=request.data)
+        serializer = DeleteAccountRequestSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         user = request.user
@@ -236,7 +236,7 @@ class DeleteAccountConfirmView(APIView):
 
     @swagger_auto_schema(request_body=DeleteAccountConfirmSerializer)
     def post(self, request, *args, **kwargs):
-        serializer = DeleteAccountConfirmSerializer(data=request.data)
+        serializer = DeleteAccountConfirmSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         user = request.user
@@ -265,12 +265,6 @@ class DeleteAccountConfirmView(APIView):
 
 
 class UserDeviceView(APIView):
-    """
-    FCM qurilma tokenini ro'yxatdan o'tkazish yoki o'chirish.
-
-    - POST   /accounts/devices/         - Token saqlash / yangilash
-    - DELETE /accounts/devices/         - Joriy tokenni o'chirish (logout paytida)
-    """
     permission_classes = (IsAuthenticated,)
 
     @swagger_auto_schema(request_body=UserDeviceSerializer, tags=["Devices"])
@@ -281,7 +275,6 @@ class UserDeviceView(APIView):
         if not token:
             return Response({"detail": "fcm_token majburiy."}, status=400)
 
-        # Agar boshqa userda bo'lsa — uni nofaol qilamiz
         UserDevice.objects.filter(fcm_token=token).exclude(user=request.user).update(is_active=False)
 
         device, created = UserDevice.objects.update_or_create(

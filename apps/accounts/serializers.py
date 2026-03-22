@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Sum
 from rest_framework import serializers
 
 from apps.core.validators import validate_phone_number
@@ -25,10 +26,30 @@ class SignInSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    coin_balance = serializers.SerializerMethodField(read_only=True)
+    total_score = serializers.SerializerMethodField(read_only=True)
+    learning_progress = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CustomUser
-        fields = ('phone', 'first_name', 'last_name', 'gender', 'birth_date', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile_image')
-        read_only_fields = ('phone', 'is_active', 'is_staff', 'date_joined', 'last_login')
+        fields = ('phone', 'first_name', 'last_name', 'gender', 'birth_date', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile_image', 'coin_balance', 'total_score', 'learning_progress')
+        read_only_fields = ('phone', 'is_active', 'is_staff', 'date_joined', 'last_login', 'coin_balance', 'total_score', 'learning_progress')
+
+    def get_coin_balance(self, obj):
+        from apps.wallet.models import CoinTransaction
+        return CoinTransaction.get_balance(obj)
+
+    def get_total_score(self, obj):
+        result = obj.scores.aggregate(total=Sum('score'))['total']
+        return result or 0
+
+    def get_learning_progress(self, obj):
+        from apps.education.models import Module
+        total_modules = Module.objects.count()
+        if total_modules == 0:
+            return 0.0
+        completed_modules = obj.module_logs.filter(is_completed=True).values('module').distinct().count()
+        return round((completed_modules / total_modules) * 100, 2)
 
 
 class RegisterSerializer(serializers.Serializer):
