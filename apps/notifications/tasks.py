@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 def _get_active_tokens(user_ids: list[int]) -> dict[int, list[str]]:
-    """user_id → [fcm_token, ...] mapping qaytaradi."""
     devices = UserDevice.objects.filter(
         user_id__in=user_ids, is_active=True
     ).values("user_id", "fcm_token")
@@ -44,9 +43,6 @@ def _bulk_create_notifications(user_ids: list[int], title: str, body: str,
 
 @shared_task(name="notifications.send_choice_started")
 def send_choice_started(choice_id: int, choice_name: str, owner_id: int):
-    """
-    Tanlov yaratilganda owner ga notification yuboradi.
-    """
     title = "Tanlov yaratildi!"
     body = f"'{choice_name}' nomli tanlov muvaffaqiyatli yaratildi."
     extra = {"choice_id": choice_id, "type": NotificationType.CHOICE_STARTED}
@@ -64,15 +60,10 @@ def send_choice_started(choice_id: int, choice_name: str, owner_id: int):
 @shared_task(name="notifications.send_choice_ended")
 def send_choice_ended(choice_id: int, choice_name: str, winner_id: int | None,
                       member_ids: list[int], award: int):
-    """
-    Tanlov tugaganda barcha a'zolarga + ownerlarga notification yuboradi.
-    G'olibga alohida xabar yuboriladi.
-    """
     all_ids = list(set(member_ids))
     if not all_ids:
         return
 
-    # Barcha a'zolarga umumiy notification
     general_title = "Tanlov tugadi!"
     general_body = f"'{choice_name}' tanlov yakunlandi."
     general_extra = {"choice_id": choice_id, "type": NotificationType.CHOICE_ENDED}
@@ -82,7 +73,6 @@ def send_choice_ended(choice_id: int, choice_name: str, winner_id: int | None,
 
     tokens_map = _get_active_tokens(all_ids)
 
-    # Barcha a'zolarga push
     for uid in all_ids:
         tokens = tokens_map.get(uid, [])
         if not tokens:

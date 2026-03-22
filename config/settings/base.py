@@ -241,7 +241,6 @@ CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Tashkent"
 
-# Har kuni soat 00:05 da muddati tugagan tanlovlarni avtomatik yopadi
 CELERY_BEAT_SCHEDULE = {
     "close-expired-choices-daily": {
         "task": "society.close_expired_choices",
@@ -255,9 +254,7 @@ ESKIZ_EMAIL = config("ESKIZ_EMAIL")
 ESKIZ_PASSWORD = config("ESKIZ_PASSWORD")
 ESKIZ_SENDER_NAME = "4546"
 
-# Firebase Cloud Messaging
-# Service account JSON faylining to'liq yo'li
-FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=None)
+FIREBASE_CREDENTIALS_PATH = BASE_DIR / "mycard-7f26d-firebase-adminsdk-fbsvc-daad80816c.json"
 
 
 LOG_DIR = BASE_DIR / "logs"

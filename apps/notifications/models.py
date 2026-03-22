@@ -21,7 +21,6 @@ class Notification(models.Model):
         default=NotificationType.SYSTEM,
         db_index=True,
     )
-    # Ixtiyoriy: qaysi tashkilot yoki tanlov bilan bog'liq
     extra_data = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
