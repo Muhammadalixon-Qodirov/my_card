@@ -10,6 +10,9 @@ class News(models.Model):
     owner = models.ForeignKey(CustomUser, related_name="news", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["-created_at"]
+
     def __str__(self):
         return self.title
 
@@ -31,6 +34,7 @@ class NewsLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ["-created_at"]
         unique_together = ("news", "user")
 
     def __str__(self):

@@ -34,6 +34,7 @@ class NewsViewSet(viewsets.ModelViewSet):
                     Value(0),
                 )
             )
+            .order_by("-created_at")
         )
 
     def perform_create(self, serializer):
@@ -70,7 +71,7 @@ class NewsLogViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return NewsLog.objects.none()
 
-        qs = NewsLog.objects.select_related("news", "user").filter(user=self.request.user)
+        qs = NewsLog.objects.select_related("news", "user").filter(user=self.request.user).order_by("-created_at")
 
         news_id = self.request.query_params.get("news")
         if news_id:
