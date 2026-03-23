@@ -7,8 +7,6 @@ from .serializers import EmergencyNotificationSerializer, NotificationSerializer
 
 
 class IsSuperUserOrReadOnly(permissions.BasePermission):
-    """Yozish (create/update/delete) faqat superuser uchun, o'qish hammaga."""
-
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
@@ -16,33 +14,12 @@ class IsSuperUserOrReadOnly(permissions.BasePermission):
 
 
 class EmergencyNotificationViewSet(viewsets.ModelViewSet):
-    """
-    Favqulodda bildirishnomalar.
-
-    - GET    /emergency-notifications/        - Ro'yxat (autentifikatsiya qilingan)
-    - GET    /emergency-notifications/{id}/   - Tafsilot (autentifikatsiya qilingan)
-    - POST   /emergency-notifications/        - Yaratish (faqat superuser)
-    - PUT    /emergency-notifications/{id}/   - To'liq yangilash (faqat superuser)
-    - PATCH  /emergency-notifications/{id}/   - Qisman yangilash (faqat superuser)
-    - DELETE /emergency-notifications/{id}/   - O'chirish (faqat superuser)
-    """
-
     queryset = EmergencyNotification.objects.all()
     serializer_class = EmergencyNotificationSerializer
     permission_classes = (IsSuperUserOrReadOnly,)
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Foydalanuvchi bildirishnomalari.
-
-    - GET  /notifications/          - Ro'yxat (faqat o'ziniki)
-    - GET  /notifications/{id}/     - Tafsilot
-    - POST /notifications/{id}/read/ - O'qilgan deb belgilash
-    - POST /notifications/read-all/  - Barchasini o'qilgan deb belgilash
-    - GET  /notifications/unread-count/ - O'qilmagan soni
-    """
-
     serializer_class = NotificationSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
