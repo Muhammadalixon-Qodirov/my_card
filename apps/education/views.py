@@ -6,16 +6,16 @@ from django.db.models.functions import Coalesce, DenseRank
 
 from apps.accounts.models import CustomUser
 from .models import (
-	Category, Module, Plan,
-	DataCard, ModuleLog, DataCardLog,
-	Test, TestAnswer, Score
+	Category, Module, DataCardLog,
+	DataCard, ModuleLog, Score,
+	Test, TestAnswer
 )
 from .serializers import (
 	CategorySerializer, ModuleSerializer,
-	PlanSerializer, DataCardSerializer,
-	ModuleLogSerializer, DataCardLogSerializer,
+	DataCardSerializer, ModuleLogSerializer,
+	DataCardLogSerializer, RatingUserSerializer,
 	TestSerializer, TestAnswerSerializer,
-	ScoreSerializer, RatingUserSerializer
+	ScoreSerializer
 )
 from .paginations import RatingPagination
 from .permissions import IsSuperUserForWrite, IsScoreOwner
@@ -115,15 +115,8 @@ class ModuleViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
 			users_in_progress=Coalesce(Subquery(users_in_progress_subquery, output_field=IntegerField()), Value(0)),
 		)
 
-
-class PlanViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
-	queryset = Plan.objects.select_related("modules", "owner").all()
-	serializer_class = PlanSerializer
-	permission_classes = (IsSuperUserForWrite,)
-
-
 class DataCardViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
-	queryset = DataCard.objects.select_related("module", "plan", "owner").prefetch_related("media")
+	queryset = DataCard.objects.select_related("module", "owner").prefetch_related("media")
 	serializer_class = DataCardSerializer
 	permission_classes = (permissions.IsAuthenticated,)
 

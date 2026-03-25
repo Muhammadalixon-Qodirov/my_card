@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import CustomUser
 from .models import (
-    Category, Module, Plan,
+    Category, Module,
     DataCard, DataCardMedia, ModuleLog,
     DataCardLog, Test, TestOption,
     TestAnswer, Score
@@ -23,7 +23,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Module
-        fields = ("id", "name", "description", "category", "owner", "coin", "score", "created_at", "progress_percent", "users_completed", "users_in_progress")
+        fields = ("id", "name", "description", "plan", "category", "owner", "coin", "score", "created_at", "progress_percent", "users_completed", "users_in_progress")
         read_only_fields = ("id", "owner", "created_at")
 
     def get_progress_percent(self, obj):
@@ -50,12 +50,6 @@ class ModuleSerializer(serializers.ModelSerializer):
         return 50 + test_progress
 
 
-class PlanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Plan
-        fields = ("id", "name", "description", "modules", "owner", "created_at")
-        read_only_fields = ("id", "owner", "created_at")
-
 
 class DataCardMediaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -80,7 +74,6 @@ class DataCardSerializer(serializers.ModelSerializer):
             "audio",
             "description",
             "module",
-            "plan",
             "owner",
             "created_at",
             "media",
@@ -90,14 +83,9 @@ class DataCardSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         module = attrs.get("module")
-        plan = attrs.get("plan")
 
         if self.instance:
             module = module or self.instance.module
-            plan = plan or self.instance.plan
-
-        if module and plan and plan.modules_id != module.id:
-            raise serializers.ValidationError("Plan tanlangan modulga tegishli bo'lishi kerak.")
 
         return attrs
 

@@ -24,6 +24,7 @@ class Category(models.Model):
 class Module(models.Model):
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, null=True)
+    plan = models.TextField(blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="modules")
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="modules")
     score = models.IntegerField(default=0)
@@ -39,30 +40,12 @@ class Module(models.Model):
         return self.name
 
 
-# Plan model
-class Plan(models.Model):
-    name = models.CharField(max_length=255, db_index=True)
-    description = models.TextField(blank=True, null=True)
-    modules = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="plans")
-    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="plans")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Plan"
-        verbose_name_plural = "Plans"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-
 # DataCard model
 class DataCard(models.Model):
     audio = models.FileField(upload_to="data_card_audio/", blank=True, null=True)
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, null=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="data_cards")
-    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="data_cards")
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="data_cards")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -91,7 +74,7 @@ class DataCardMedia(models.Model):
 
 
 
-# Modeule Log model
+# Module Log model
 class ModuleLog(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="logs")
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="module_logs")

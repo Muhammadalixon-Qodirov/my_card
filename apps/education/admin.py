@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import (
 	Category,
 	Module,
-	Plan,
 	DataCard,
 	DataCardMedia,
 	ModuleLog,
@@ -38,19 +37,11 @@ class ModuleAdmin(admin.ModelAdmin):
 	list_filter = ("category", "created_at")
 	search_fields = ("name", "description", "category__name", "owner__phone")
 
-
-@admin.register(Plan)
-class PlanAdmin(admin.ModelAdmin):
-	list_display = ("id", "name", "modules", "owner", "created_at")
-	list_filter = ("modules", "created_at")
-	search_fields = ("name", "description", "modules__name", "owner__phone")
-
-
 @admin.register(DataCard)
 class DataCardAdmin(admin.ModelAdmin):
-	list_display = ("id", "name", "module", "plan", "owner", "created_at")
-	list_filter = ("module", "plan", "created_at")
-	search_fields = ("name", "description", "module__name", "plan__name", "owner__phone")
+	list_display = ("id", "name", "module", "owner", "created_at")
+	list_filter = ("module", "created_at")
+	search_fields = ("name", "description", "module__name", "owner__phone")
 	inlines = (DataCardMediaInline,)
 
 

@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import CustomUser
-from .models import Category, Module, Plan, DataCard, DataCardLog, Test, TestOption, TestAnswer
+from .models import Category, Module, DataCard, DataCardLog, Test, TestOption, TestAnswer
 
 
 class ModuleProgressAPITests(APITestCase):
@@ -24,21 +24,14 @@ class ModuleProgressAPITests(APITestCase):
 			category=self.category,
 			owner=self.user,
 		)
-		self.plan = Plan.objects.create(
-			name="1-Plan",
-			modules=self.module,
-			owner=self.user,
-		)
 		self.data_card_1 = DataCard.objects.create(
 			name="Dars 1",
 			module=self.module,
-			plan=self.plan,
 			owner=self.user,
 		)
 		self.data_card_2 = DataCard.objects.create(
 			name="Dars 2",
 			module=self.module,
-			plan=self.plan,
 			owner=self.user,
 		)
 
