@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import News, NewsMedia, NewsLog
+from .models import News, NewsMedia, NewsLog, Feedback
 
 
 ALLOWED_MEDIA_TYPES = ("image", "video")
@@ -36,3 +36,25 @@ class NewsLogSerializer(serializers.ModelSerializer):
         model = NewsLog
         fields = ("id", "news", "user", "is_read", "created_at")
         read_only_fields = ("id", "user", "created_at")
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = (
+            "id",
+            "feedback_type",
+            "subject",
+            "message",
+            "status",
+            "owner",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "owner", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and not request.user.is_superuser and "status" in attrs:
+            raise serializers.ValidationError({"status": "Status ni faqat admin o'zgartira oladi."})
+        return attrs

@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
 
-from .models import News, NewsMedia, NewsLog
-from .serializers import NewsSerializer, NewsLogSerializer
+from .models import News, NewsMedia, NewsLog, Feedback
+from .serializers import NewsSerializer, NewsLogSerializer, FeedbackSerializer
 from apps.education.permissions import IsSuperUserForWrite
 
 
@@ -98,3 +98,23 @@ class NewsLogViewSet(viewsets.ModelViewSet):
         out_serializer = self.get_serializer(log)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(out_serializer.data, status=status_code)
+
+
+class FeedbackViewSet(viewsets.ModelViewSet):
+    serializer_class = FeedbackSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Feedback.objects.none()
+        if self.request.user.is_superuser:
+            return Feedback.objects.select_related("owner").all()
+        return Feedback.objects.select_related("owner").filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def get_permissions(self):
+        if self.action in ("update", "partial_update"):
+            return (permissions.IsAdminUser(),)
+        return super().get_permissions()
