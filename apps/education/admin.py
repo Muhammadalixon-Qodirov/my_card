@@ -11,6 +11,7 @@ from .models import (
 	TestOption,
 	TestAnswer,
 	Score,
+	ModuleFeedback,
 )
 
 
@@ -81,3 +82,11 @@ class ScoreAdmin(admin.ModelAdmin):
 	search_fields = ("user__phone", "module__name")
 	readonly_fields = ("created_at", "updated_at")
 	ordering = ("-updated_at",)
+
+
+@admin.register(ModuleFeedback)
+class ModuleFeedbackAdmin(admin.ModelAdmin):
+	list_display = ("id", "module", "user", "reaction", "created_at")
+	list_filter = ("reaction", "created_at", "module")
+	search_fields = ("module__name", "user__phone", "comment")
+	readonly_fields = ("created_at", "updated_at")

@@ -5,8 +5,8 @@ from .views import (
 	CategoryViewSet, ModuleViewSet,
 	DataCardViewSet,
 	ModuleLogViewSet, DataCardLogViewSet,
-	TestViewSet, TestAnswerViewSet,
-	ScoreViewSet, RatingListView
+	TestViewSet, SpecialTestViewSet, TestAnswerViewSet,
+	ScoreViewSet, RatingListView, ModuleFeedbackViewSet
 )
 
 
@@ -17,8 +17,10 @@ router.register("data-cards", DataCardViewSet, basename="data-card")
 router.register("module-logs", ModuleLogViewSet, basename="module-log")
 router.register("data-card-logs", DataCardLogViewSet, basename="data-card-log")
 router.register("tests", TestViewSet, basename="test")
+router.register("special-tests", SpecialTestViewSet, basename="special-test")
 router.register("test-answers", TestAnswerViewSet, basename="test-answer")
 router.register("scores", ScoreViewSet, basename="score")
+router.register("module-feedbacks", ModuleFeedbackViewSet, basename="module-feedback")
 
 
 urlpatterns = router.urls + [

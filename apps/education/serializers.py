@@ -5,8 +5,15 @@ from .models import (
     Category, Module,
     DataCard, DataCardMedia, ModuleLog,
     DataCardLog, Test, TestOption,
-    TestAnswer, Score
+    TestAnswer, Score, ModuleFeedback
 )
+
+
+class ModuleFeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModuleFeedback
+        fields = ("id", "module", "user", "reaction", "comment", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "created_at", "updated_at")
 
 
 class CategorySerializer(serializers.ModelSerializer):

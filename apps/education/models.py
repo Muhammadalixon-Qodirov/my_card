@@ -112,6 +112,7 @@ class Test(models.Model):
     question = models.TextField()
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="tests")
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="tests")
+    is_special = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -152,6 +153,30 @@ class TestAnswer(models.Model):
 
     def __str__(self):
         return f"{self.user.phone} - Answer for {self.test.question}"
+
+
+# Module Feedback model
+class ModuleFeedback(models.Model):
+    REACTION_CHOICES = (
+        ('like', "Like"),
+        ('dislike', "Dislike"),
+    )
+
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="feedbacks")
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="module_feedbacks")
+    reaction = models.CharField(max_length=10, choices=REACTION_CHOICES)
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "ModuleFeedback"
+        verbose_name_plural = "ModuleFeedbacks"
+        ordering = ["-created_at"]
+        unique_together = ("module", "user")
+
+    def __str__(self):
+        return f"{self.user.phone} - {self.reaction} on {self.module.name}"
 
 
 # Score model

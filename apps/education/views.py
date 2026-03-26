@@ -8,14 +8,14 @@ from apps.accounts.models import CustomUser
 from .models import (
 	Category, Module, DataCardLog,
 	DataCard, ModuleLog, Score,
-	Test, TestAnswer
+	Test, TestAnswer, ModuleFeedback
 )
 from .serializers import (
 	CategorySerializer, ModuleSerializer,
 	DataCardSerializer, ModuleLogSerializer,
 	DataCardLogSerializer, RatingUserSerializer,
 	TestSerializer, TestAnswerSerializer,
-	ScoreSerializer
+	ScoreSerializer, ModuleFeedbackSerializer
 )
 from .paginations import RatingPagination
 from .permissions import IsSuperUserForWrite, IsScoreOwner
@@ -151,9 +151,26 @@ class DataCardLogViewSet(UserCreateMixin, viewsets.ModelViewSet):
 
 
 class TestViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
-	queryset = Test.objects.select_related("module", "owner").prefetch_related("options")
 	serializer_class = TestSerializer
 	permission_classes = (IsSuperUserForWrite,)
+
+	def get_queryset(self):
+		if getattr(self, "swagger_fake_view", False):
+			return Test.objects.none()
+		return Test.objects.select_related("module", "owner").prefetch_related("options").filter(is_special=False)
+
+
+class SpecialTestViewSet(OwnerCreateMixin, viewsets.ModelViewSet):
+	serializer_class = TestSerializer
+	permission_classes = (IsSuperUserForWrite,)
+
+	def get_queryset(self):
+		if getattr(self, "swagger_fake_view", False):
+			return Test.objects.none()
+		return Test.objects.select_related("module", "owner").prefetch_related("options").filter(is_special=True)
+
+	def perform_create(self, serializer):
+		serializer.save(owner=self.request.user, is_special=True)
 
 
 class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
@@ -227,6 +244,26 @@ class TestAnswerViewSet(UserCreateMixin, viewsets.ModelViewSet):
 			defaults={"is_completed": True},
 		)
 
+
+
+class ModuleFeedbackViewSet(viewsets.ModelViewSet):
+	serializer_class = ModuleFeedbackSerializer
+	permission_classes = (permissions.IsAuthenticated,)
+
+	def get_queryset(self):
+		if getattr(self, "swagger_fake_view", False):
+			return ModuleFeedback.objects.none()
+		if self.request.user.is_superuser:
+			return ModuleFeedback.objects.select_related("module", "user").all()
+		return ModuleFeedback.objects.select_related("module", "user").filter(user=self.request.user)
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+	def get_permissions(self):
+		if self.action in ("destroy",):
+			return (permissions.IsAdminUser(),)
+		return super().get_permissions()
 
 
 class ScoreViewSet(viewsets.ModelViewSet):
