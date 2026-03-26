@@ -75,3 +75,16 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.feedback_type}: {self.subject}"
+
+
+# Answer model to store responses to feedback
+class Answer(models.Model):
+    question = models.ForeignKey(Feedback, related_name="answers", on_delete=models.CASCADE)
+    answer = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Answer to {self.question.subject}"

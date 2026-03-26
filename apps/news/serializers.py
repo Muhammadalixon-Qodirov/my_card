@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import News, NewsMedia, NewsLog, Feedback
+from .models import News, NewsMedia, NewsLog, Feedback, Answer
 
 
 ALLOWED_MEDIA_TYPES = ("image", "video")
@@ -58,3 +58,10 @@ class FeedbackSerializer(serializers.ModelSerializer):
         if request and not request.user.is_superuser and "status" in attrs:
             raise serializers.ValidationError({"status": "Status ni faqat admin o'zgartira oladi."})
         return attrs
+
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = ("id", "question", "answer", "created_at")
+        read_only_fields = ("id", "created_at")

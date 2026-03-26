@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
 
-from .models import News, NewsMedia, NewsLog, Feedback
-from .serializers import NewsSerializer, NewsLogSerializer, FeedbackSerializer
+from .models import News, NewsMedia, NewsLog, Feedback, Answer
+from .serializers import NewsSerializer, NewsLogSerializer, FeedbackSerializer, AnswerSerializer
 from apps.education.permissions import IsSuperUserForWrite
 
 
@@ -118,3 +118,13 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         if self.action in ("update", "partial_update"):
             return (permissions.IsAdminUser(),)
         return super().get_permissions()
+
+
+class AnswerViewSet(viewsets.ModelViewSet):
+    serializer_class = AnswerSerializer
+    permission_classes = (IsSuperUserForWrite,)
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Answer.objects.none()
+        return Answer.objects.select_related("question").all()

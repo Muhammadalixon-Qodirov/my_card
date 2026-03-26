@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import News, NewsMedia, NewsLog, Feedback
+from .models import News, NewsMedia, NewsLog, Feedback, Answer
 
 
 class NewsMediaInline(admin.TabularInline):
@@ -40,4 +40,12 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter = ("feedback_type", "status", "created_at")
     search_fields = ("subject", "message", "owner__phone")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(Answer)
+class AnswerAdmin(admin.ModelAdmin):
+    list_display = ("id", "question", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("question__subject", "answer")
+    readonly_fields = ("created_at",)
 
