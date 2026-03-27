@@ -198,7 +198,7 @@ class TestAnswerSerializer(serializers.ModelSerializer):
         if test and not test.is_active:
             raise serializers.ValidationError("Ushbu test faol emas.")
 
-        if request and request.user and request.user.is_authenticated and test:
+        if request and request.user and request.user.is_authenticated and test and not test.is_special:
             module_data_cards_count = test.module.data_cards.count()
             if module_data_cards_count > 0:
                 completed_count = DataCardLog.objects.filter(
