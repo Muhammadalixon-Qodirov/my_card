@@ -44,12 +44,37 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return result or 0
 
     def get_learning_progress(self, obj):
-        from apps.education.models import Module
+        from apps.education.models import Module, Test, TestAnswer
+
+        special_tests = Test.objects.filter(is_special=True, is_active=True)
+        total_special = special_tests.count()
+
+        if total_special == 0:
+            return 0.0
+
+        # Count distinct special tests the user has answered correctly at least once
+        correct_special = TestAnswer.objects.filter(
+            user=obj,
+            test__is_special=True,
+            test__is_active=True,
+            is_correct=True,
+        ).values('test').distinct().count()
+
+        special_progress = (correct_special / total_special) * 100
+        remaining_pct = 100 - special_progress
+
+        if remaining_pct == 0:
+            return 100.0
+
+        # The remaining percentage is distributed across all modules
         total_modules = Module.objects.count()
         if total_modules == 0:
-            return 0.0
+            return round(special_progress, 2)
+
         completed_modules = obj.module_logs.filter(is_completed=True).values('module').distinct().count()
-        return round((completed_modules / total_modules) * 100, 2)
+        module_contribution = (completed_modules / total_modules) * remaining_pct
+
+        return round(special_progress + module_contribution, 2)
 
 
 class RegisterSerializer(serializers.Serializer):
