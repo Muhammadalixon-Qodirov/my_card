@@ -9,6 +9,8 @@ from .views import (
     DeleteAccountRequestView,
     DeleteAccountConfirmView,
     UserDeviceView,
+    ForgotPasswordRequestView,
+    ForgotPasswordResetView,
 )
 
 
@@ -18,6 +20,8 @@ urlpatterns = [
     path('profile/', MyProfileView.as_view(), name='user-profile'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('password/change/', PasswordChangeView.as_view(), name='password-change'),
+    path('password/forgot/', ForgotPasswordRequestView.as_view(), name='password-forgot'),
+    path('password/reset/', ForgotPasswordResetView.as_view(), name='password-reset'),
     path('delete/request/', DeleteAccountRequestView.as_view(), name='delete-account-request'),
     path('delete/confirm/', DeleteAccountConfirmView.as_view(), name='delete-account-confirm'),
 

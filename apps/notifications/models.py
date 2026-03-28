@@ -36,6 +36,7 @@ class Notification(models.Model):
 
 
 class EmergencyNotification(models.Model):
+    image = models.ImageField(upload_to="emergency_notifications/", null=True, blank=True)
     title = models.CharField(max_length=255)
     body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

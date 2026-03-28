@@ -19,12 +19,15 @@ from .serializers import (
     DeleteAccountRequestSerializer,
     DeleteAccountConfirmSerializer,
     UserDeviceSerializer,
+    ForgotPasswordRequestSerializer,
+    ForgotPasswordResetSerializer,
 )
 
 
 REGISTER_PENDING_KEY = 'register_pending:{phone}'
 OTP_KEY = 'phone_otp:{phone}'
 DELETE_ACCOUNT_PENDING_KEY = 'delete_account_pending:{phone}'
+FORGOT_PASSWORD_PENDING_KEY = 'forgot_password_pending:{phone}'
 
 
 
@@ -196,6 +199,75 @@ class PasswordChangeView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"status": True, "message": "Parol muvaffaqiyatli o'zgartirildi."}, status=200)
+
+
+class ForgotPasswordRequestView(APIView):
+    permission_classes = (AllowAny,)
+
+    @swagger_auto_schema(request_body=ForgotPasswordRequestSerializer, tags=["Auth"])
+    def post(self, request, *args, **kwargs):
+        serializer = ForgotPasswordRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phone']
+        otp_key = OTP_KEY.format(phone=phone)
+
+        if cache.get(otp_key):
+            ttl = cache.ttl(otp_key) or 0
+            return Response(
+                {"message": "OTP allaqachon yuborilgan.", "wait_seconds": ttl},
+                status=429,
+            )
+
+        pending_key = FORGOT_PASSWORD_PENDING_KEY.format(phone=phone)
+        cache.set(pending_key, True, timeout=OTP_TTL)
+        send_sms_otp.apply_async(args=[phone], countdown=1)
+
+        return Response(
+            {"status": True, "message": "Tasdiqlash kodi yuborildi. 5 daqiqa ichida tasdiqlang."},
+            status=200,
+        )
+
+
+class ForgotPasswordResetView(APIView):
+    permission_classes = (AllowAny,)
+
+    @swagger_auto_schema(request_body=ForgotPasswordResetSerializer, tags=["Auth"])
+    def post(self, request, *args, **kwargs):
+        serializer = ForgotPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phone']
+        code = serializer.validated_data['code']
+        new_password = serializer.validated_data['new_password']
+
+        pending_key = FORGOT_PASSWORD_PENDING_KEY.format(phone=phone)
+        if not cache.get(pending_key):
+            return Response(
+                {"message": "Avval parolni tiklash so'rovini yuboring."},
+                status=400,
+            )
+
+        otp_key = OTP_KEY.format(phone=phone)
+        cached_code = cache.get(otp_key)
+        if not cached_code or cached_code != code:
+            return Response({"message": "Kod noto'g'ri yoki muddati o'tgan."}, status=400)
+
+        try:
+            user = CustomUser.objects.get(phone=phone, is_active=True)
+        except CustomUser.DoesNotExist:
+            return Response({"message": "Foydalanuvchi topilmadi."}, status=404)
+
+        cache.delete(otp_key)
+        cache.delete(pending_key)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response(
+            {"status": True, "message": "Parol muvaffaqiyatli yangilandi."},
+            status=200,
+        )
 
 
 class DeleteAccountRequestView(APIView):
