@@ -58,7 +58,7 @@ class ChoiceViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         choice = Choice.objects.select_related("owner", "winner").get(pk=serializer.instance.pk)
-        return Response(ChoiceDetailSerializer(choice).data, status=status.HTTP_201_CREATED)
+        return Response(ChoiceDetailSerializer(choice, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["post"], url_path="join")
     def join(self, request):

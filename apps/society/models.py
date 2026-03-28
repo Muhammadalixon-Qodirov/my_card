@@ -8,7 +8,8 @@ from .utils import generate_unique_code
 class Choice(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    code = models.CharField(max_length=8, unique=True, blank=True)
+    code = models.CharField(max_length=8, unique=True, blank=True, null=True)
+    is_public = models.BooleanField(default=False)
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='choices')
     winner = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL,
@@ -23,7 +24,9 @@ class Choice(models.Model):
         ordering = ['-started_at']
 
     def save(self, *args, **kwargs):
-        if not self.code:
+        if self.is_public:
+            self.code = None
+        elif not self.code:
             while True:
                 code = generate_unique_code()
                 if not Choice.objects.filter(code=code).exists():

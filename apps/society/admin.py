@@ -12,8 +12,8 @@ class ChoiceMemberInline(admin.TabularInline):
 
 @admin.register(Choice)
 class ChoiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "code", "owner", "winner", "award", "is_active", "started_at", "ended_at")
-    list_filter = ("is_active", "started_at")
+    list_display = ("id", "name", "is_public", "code", "owner", "winner", "award", "is_active", "started_at", "ended_at")
+    list_filter = ("is_public", "is_active", "started_at")
     search_fields = ("name", "code", "owner__phone", "winner__phone")
     readonly_fields = ("code", "started_at")
     inlines = (ChoiceMemberInline,)

@@ -7,7 +7,7 @@ from .models import Choice, ChoiceMember
 class ChoiceCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Choice
-        fields = ("id", "name", "description", "award", "ended_at")
+        fields = ("id", "name", "description", "award", "ended_at", "is_public")
 
     def validate_award(self, value):
         if value <= 0:
@@ -26,6 +26,7 @@ class ChoiceCreateSerializer(serializers.ModelSerializer):
 
 
 class ChoiceDetailSerializer(serializers.ModelSerializer):
+    code = serializers.SerializerMethodField()
     owner_name = serializers.CharField(source="owner.first_name", read_only=True)
     owner_phone = serializers.CharField(source="owner.phone", read_only=True)
     winner_name = serializers.CharField(source="winner.first_name", read_only=True, default=None)
@@ -37,11 +38,21 @@ class ChoiceDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id", "name", "description", "code", "owner_name", "owner_phone",
             "winner_name", "winner_phone",
-            "award", "is_active", "started_at", "ended_at", "member_count",
+            "award", "is_public", "is_active", "started_at", "ended_at", "member_count",
         )
 
     def get_member_count(self, obj):
         return obj.members.count()
+
+    def get_code(self, obj):
+        if obj.is_public:
+            return None
+
+        request = self.context.get("request")
+        if request and request.user and request.user.is_authenticated and request.user.id == obj.owner_id:
+            return obj.code
+
+        return None
 
 
 class ChoiceMemberSerializer(serializers.ModelSerializer):
@@ -54,15 +65,40 @@ class ChoiceMemberSerializer(serializers.ModelSerializer):
 
 
 class JoinChoiceSerializer(serializers.Serializer):
-    code = serializers.CharField(max_length=8)
+    choice_id = serializers.IntegerField(required=False)
+    code = serializers.CharField(max_length=8, required=False, allow_blank=False)
 
-    def validate_code(self, value):
+    def validate(self, attrs):
+        code = attrs.get("code")
+        choice_id = attrs.get("choice_id")
+
+        if code:
+            try:
+                choice = Choice.objects.get(code=code.upper(), is_active=True, is_public=False)
+            except Choice.DoesNotExist:
+                raise serializers.ValidationError({"code": "Bunday kod bilan faol private tanlov topilmadi."})
+
+            attrs["code"] = code.upper()
+            self.context["choice"] = choice
+            return attrs
+
+        if choice_id is None:
+            raise serializers.ValidationError(
+                {"detail": "Public tanlovga kirish uchun choice_id yuboring yoki private tanlov uchun code yuboring."}
+            )
+
         try:
-            choice = Choice.objects.get(code=value.upper(), is_active=True)
+            choice = Choice.objects.get(id=choice_id, is_active=True)
         except Choice.DoesNotExist:
-            raise serializers.ValidationError("Bunday kod bilan faol tanlov topilmadi.")
+            raise serializers.ValidationError({"choice_id": "Bunday ID bilan faol tanlov topilmadi."})
+
+        if not choice.is_public:
+            raise serializers.ValidationError(
+                {"detail": "Bu private tanlov. Kirish uchun code yuborish kerak."}
+            )
+
         self.context["choice"] = choice
-        return value.upper()
+        return attrs
 
 
 class LeaderboardEntrySerializer(serializers.Serializer):
