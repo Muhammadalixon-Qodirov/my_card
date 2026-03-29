@@ -49,22 +49,32 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(EmergencyNotification)
 class EmergencyNotificationAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "short_body", "created_at")
+    list_display = ("id", "title", "has_image", "short_body", "created_at")
     search_fields = ("title", "body")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("image_preview", "created_at")
     list_per_page = 20
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
 
     fieldsets = (
         ("Asosiy ma'lumot", {
-            "fields": ("title", "body"),
+            "fields": ("title", "body", "image", "image_preview"),
         }),
         ("Meta", {
             "fields": ("created_at",),
             "classes": ("collapse",),
         }),
     )
+
+    @admin.display(description="Rasm")
+    def has_image(self, obj):
+        return "Ha" if obj.image else "Yo'q"
+
+    @admin.display(description="Rasm preview")
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="max-height: 120px; border-radius: 6px;" />', obj.image.url)
+        return "Rasm yo'q"
 
     @admin.display(description="Matn (qisqa)")
     def short_body(self, obj):
