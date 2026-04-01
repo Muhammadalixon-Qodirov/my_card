@@ -88,3 +88,28 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Answer to {self.question.subject}"
+
+
+class Question(models.Model):
+    question = models.TextField()
+    answer = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Question: {self.question[:50]}..."
+
+
+class QuestionLike(models.Model):
+    question = models.ForeignKey(Question, related_name="likes", on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, related_name="liked_questions", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("question", "user")
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.question.question[:50]}..."

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import News, NewsMedia, NewsLog, Feedback, Answer
+from .models import News, NewsMedia, NewsLog, Feedback, Answer, Question, QuestionLike
 
 
 ALLOWED_MEDIA_TYPES = ("image", "video")
@@ -64,4 +64,21 @@ class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = ("id", "question", "answer", "created_at")
+        read_only_fields = ("id", "created_at")
+
+
+class QuestionLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionLike
+        fields = ("id", "question", "user", "created_at")
+        read_only_fields = ("id", "user", "created_at")
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    likes_count = serializers.IntegerField(read_only=True)
+    is_liked = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ("id", "question", "answer", "likes_count", "is_liked", "created_at")
         read_only_fields = ("id", "created_at")

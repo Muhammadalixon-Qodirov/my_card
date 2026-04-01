@@ -1,10 +1,10 @@
 from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
-from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value, Exists, BooleanField
 from django.db.models.functions import Coalesce
 
-from .models import News, NewsMedia, NewsLog, Feedback, Answer
-from .serializers import NewsSerializer, NewsLogSerializer, FeedbackSerializer, AnswerSerializer
+from .models import News, NewsMedia, NewsLog, Feedback, Answer, Question, QuestionLike
+from .serializers import NewsSerializer, NewsLogSerializer, FeedbackSerializer, AnswerSerializer, QuestionSerializer, QuestionLikeSerializer
 from apps.education.permissions import IsSuperUserForWrite
 
 
@@ -128,3 +128,54 @@ class AnswerViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return Answer.objects.none()
         return Answer.objects.select_related("question").all()
+
+
+class QuestionViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = QuestionSerializer
+    permission_classes = (permissions.AllowAny,)
+    http_method_names = ["get", "head", "options"]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Question.objects.none()
+
+        queryset = Question.objects.annotate(
+            likes_count=Count("likes", distinct=True)
+        )
+
+        if self.request.user.is_authenticated:
+            queryset = queryset.annotate(
+                is_liked=Exists(
+                    QuestionLike.objects.filter(
+                        question_id=OuterRef("pk"),
+                        user_id=self.request.user.id
+                    )
+                )
+            )
+        else:
+            queryset = queryset.annotate(is_liked=Value(False, output_field=BooleanField()))
+
+        return queryset
+
+
+class QuestionLikeViewSet(viewsets.ModelViewSet):
+    serializer_class = QuestionLikeSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return QuestionLike.objects.none()
+        return QuestionLike.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_object(self):
+        question_id = self.request.data.get("question")
+        if question_id:
+            return QuestionLike.objects.get_or_create(
+                question_id=question_id,
+                user=self.request.user
+            )[0]
+        return super().get_object()
