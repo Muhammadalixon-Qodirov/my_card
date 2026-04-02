@@ -94,7 +94,7 @@ class RegisterView(APIView):
                           if serializer.validated_data.get('birth_date') else None,
         }, timeout=OTP_TTL)
 
-        send_sms_otp.apply_async(args=[phone], countdown=1)
+        send_sms_otp.apply_async(args=[phone, "register"], countdown=1)
         return Response({"status": True, "message": "OTP kod yuborildi. 5 daqiqa ichida tasdiqlang."}, status=200)
 
 
@@ -221,7 +221,7 @@ class ForgotPasswordRequestView(APIView):
 
         pending_key = FORGOT_PASSWORD_PENDING_KEY.format(phone=phone)
         cache.set(pending_key, True, timeout=OTP_TTL)
-        send_sms_otp.apply_async(args=[phone], countdown=1)
+        send_sms_otp.apply_async(args=[phone, "forgot_password"], countdown=1)
 
         return Response(
             {"status": True, "message": "Tasdiqlash kodi yuborildi. 5 daqiqa ichida tasdiqlang."},
@@ -295,7 +295,7 @@ class DeleteAccountRequestView(APIView):
 
         delete_pending_key = DELETE_ACCOUNT_PENDING_KEY.format(phone=phone)
         cache.set(delete_pending_key, True, timeout=OTP_TTL)
-        send_sms_otp.apply_async(args=[phone], countdown=1)
+        send_sms_otp.apply_async(args=[phone, "delete_account"], countdown=1)
 
         return Response(
             {"status": True, "message": "Tasdiqlash kodi yuborildi. 5 daqiqa ichida tasdiqlang."},
