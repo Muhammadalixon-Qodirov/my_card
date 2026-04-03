@@ -5,7 +5,7 @@ from .models import (
     Category, Module,
     DataCard, DataCardMedia, ModuleLog,
     DataCardLog, Test, TestOption,
-    TestAnswer, Score, ModuleFeedback
+    TestAnswer, Score, ModuleFeedback, Question, FeedbackModule
 )
 
 
@@ -238,3 +238,47 @@ class RatingUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ("id", "text", "answer", "module", "created_at")
+        read_only_fields = ("id", "created_at")
+
+
+class FeedbackModuleSerializer(serializers.ModelSerializer):
+    replies = serializers.SerializerMethodField(read_only=True)
+    user_phone = serializers.CharField(source="user.phone", read_only=True)
+
+    class Meta:
+        model = FeedbackModule
+        fields = ("id", "user", "user_phone", "module", "feedback", "reply_to", "is_admin_reply", "replies", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "is_admin_reply", "created_at", "updated_at")
+
+    def get_replies(self, obj):
+        replies = obj.replies.all()
+        return FeedbackModuleSerializer(replies, many=True).data
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        reply_to = attrs.get("reply_to")
+
+        if reply_to:
+            if not request or not request.user or not request.user.is_superuser:
+                raise serializers.ValidationError(
+                    {"reply_to": "Faqat admin javob yoza oladi."}
+                )
+        
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        
+        if validated_data.get("reply_to") and request.user.is_superuser:
+            validated_data["is_admin_reply"] = True
+            validated_data["user"] = request.user
+        else:
+            validated_data["user"] = request.user
+        
+        return super().create(validated_data)

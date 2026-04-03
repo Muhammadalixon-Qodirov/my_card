@@ -12,6 +12,8 @@ from .models import (
 	TestAnswer,
 	Score,
 	ModuleFeedback,
+	Question,
+	FeedbackModule,
 )
 
 
@@ -23,6 +25,14 @@ class DataCardMediaInline(admin.TabularInline):
 class TestOptionInline(admin.TabularInline):
 	model = TestOption
 	extra = 2
+
+
+class FeedbackModuleRepliesInline(admin.TabularInline):
+	model = FeedbackModule
+	fk_name = "reply_to"
+	extra = 1
+	fields = ("feedback", "created_at")
+	readonly_fields = ("created_at",)
 
 
 @admin.register(Category)
@@ -90,3 +100,32 @@ class ModuleFeedbackAdmin(admin.ModelAdmin):
 	list_filter = ("reaction", "created_at", "module")
 	search_fields = ("module__name", "user__phone", "comment")
 	readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+	list_display = ("id", "text", "module", "created_at")
+	list_filter = ("created_at", "module")
+	search_fields = ("text", "answer", "module__name")
+	readonly_fields = ("created_at",)
+
+
+@admin.register(FeedbackModule)
+class FeedbackModuleAdmin(admin.ModelAdmin):
+	list_display = ("id", "user", "module", "is_admin_reply", "created_at")
+	list_filter = ("is_admin_reply", "created_at", "module")
+	search_fields = ("feedback", "user__phone", "module__name")
+	readonly_fields = ("created_at", "updated_at", "user")
+	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
+	inlines = (FeedbackModuleRepliesInline,)
+	
+	def get_queryset(self, request):
+		qs = super().get_queryset(request)
+		if request.user.is_superuser:
+			return qs
+		return qs.filter(reply_to__isnull=True)
+	
+	def save_model(self, request, obj, form, change):
+		if obj.reply_to and not obj.is_admin_reply:
+			obj.is_admin_reply = True
+		super().save_model(request, obj, form, change)

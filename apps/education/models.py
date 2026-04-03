@@ -195,3 +195,37 @@ class Score(models.Model):
 
     def __str__(self):
         return f"{self.user.phone} - Score for {self.module.name}: {self.score}"
+
+
+class Question(models.Model):
+    text = models.TextField()
+    answer = models.TextField()
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="questions")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Question"
+        verbose_name_plural = "Questions"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Question for {self.module.name}"
+
+
+class FeedbackModule(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="feedback_modules")
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="feedback_modules")
+    feedback = models.TextField()
+    reply_to = models.ForeignKey("self", on_delete=models.CASCADE, related_name="replies", blank=True, null=True)
+    is_admin_reply = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "FeedbackModule"
+        verbose_name_plural = "FeedbackModules"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        prefix = "[Admin]" if self.is_admin_reply else "[User]"
+        return f"{prefix} {self.user.phone} - Feedback for {self.module.name}"
