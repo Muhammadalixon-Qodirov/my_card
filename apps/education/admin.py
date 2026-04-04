@@ -116,4 +116,6 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 			obj.is_admin_reply = True
 			if obj.reply_to:
 				obj.module = obj.reply_to.module
+				obj.reply_to.is_admin_reply = True
+				obj.reply_to.save()
 		super().save_model(request, obj, form, change)
