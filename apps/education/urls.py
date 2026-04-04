@@ -26,13 +26,13 @@ router.register("module-feedbacks", ModuleFeedbackViewSet, basename="module-feed
 urlpatterns = router.urls + [
 	path("rating/", RatingListView.as_view(), name="rating"),
 	path("modules/<int:module_id>/questions/", ModuleQuestionViewSet.as_view({"get": "list"}), name="module-questions"),
-	path("modules/<int:module_id>/feedbacks/", ModuleCommentViewSet.as_view({
+	path("modules/<int:module_id>/comments/", ModuleCommentViewSet.as_view({
 		"get": "list",
 		"post": "create"
-	}), name="module-feedbacks"),
-	path("modules/<int:module_id>/feedbacks/<int:pk>/", ModuleCommentViewSet.as_view({
+	}), name="module-comments"),
+	path("modules/<int:module_id>/comments/<int:pk>/", ModuleCommentViewSet.as_view({
 		"get": "retrieve",
 		"patch": "partial_update",
 		"delete": "destroy"
-	}), name="module-feedback-detail"),
+	}), name="module-comment-detail"),
 ]
