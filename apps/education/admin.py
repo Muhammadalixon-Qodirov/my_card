@@ -31,8 +31,17 @@ class ModuleCommentRepliesInline(admin.TabularInline):
 	model = ModuleComment
 	fk_name = "reply_to"
 	extra = 1
-	fields = ("feedback", "created_at")
-	readonly_fields = ("created_at",)
+	fields = ("module", "feedback", "is_admin_reply", "created_at")
+	readonly_fields = ("created_at", "module")
+	
+	def save_formset(self, request, form, formset, change):
+		instances = formset.save(commit=False)
+		for instance in instances:
+			if instance.reply_to:
+				# Inherit module from parent comment
+				instance.module = instance.reply_to.module
+			instance.save()
+		formset.save_m2m()
 
 
 @admin.register(Category)
