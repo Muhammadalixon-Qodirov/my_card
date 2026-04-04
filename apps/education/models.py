@@ -197,24 +197,24 @@ class Score(models.Model):
         return f"{self.user.phone} - Score for {self.module.name}: {self.score}"
 
 
-class Question(models.Model):
+class ModuleQuestion(models.Model):
     text = models.TextField()
     answer = models.TextField()
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="questions")
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="module_questions")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Question"
-        verbose_name_plural = "Questions"
+        verbose_name = "ModuleQuestion"
+        verbose_name_plural = "ModuleQuestions"
         ordering = ["created_at"]
 
     def __str__(self):
         return f"Question for {self.module.name}"
 
 
-class FeedbackModule(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="feedback_modules")
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="feedback_modules")
+class ModuleComment(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="module_comments")
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="module_comments")
     feedback = models.TextField()
     reply_to = models.ForeignKey("self", on_delete=models.CASCADE, related_name="replies", blank=True, null=True)
     is_admin_reply = models.BooleanField(default=False)
@@ -222,8 +222,8 @@ class FeedbackModule(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "FeedbackModule"
-        verbose_name_plural = "FeedbackModules"
+        verbose_name = "ModuleComment"
+        verbose_name_plural = "ModuleComments"
         ordering = ["-created_at"]
 
     def __str__(self):

@@ -6,7 +6,7 @@ from .views import (
 	DataCardViewSet,
 	ModuleLogViewSet, DataCardLogViewSet,
 	TestViewSet, SpecialTestViewSet, TestAnswerViewSet,
-	ScoreViewSet, RatingListView, ModuleFeedbackViewSet, QuestionViewSet, FeedbackModuleViewSet
+	ScoreViewSet, RatingListView, ModuleFeedbackViewSet, ModuleQuestionViewSet, ModuleCommentViewSet
 )
 
 
@@ -25,12 +25,12 @@ router.register("module-feedbacks", ModuleFeedbackViewSet, basename="module-feed
 
 urlpatterns = router.urls + [
 	path("rating/", RatingListView.as_view(), name="rating"),
-	path("modules/<int:module_id>/questions/", QuestionViewSet.as_view({"get": "list"}), name="module-questions"),
-	path("modules/<int:module_id>/feedbacks/", FeedbackModuleViewSet.as_view({
+	path("modules/<int:module_id>/questions/", ModuleQuestionViewSet.as_view({"get": "list"}), name="module-questions"),
+	path("modules/<int:module_id>/feedbacks/", ModuleCommentViewSet.as_view({
 		"get": "list",
 		"post": "create"
 	}), name="module-feedbacks"),
-	path("modules/<int:module_id>/feedbacks/<int:pk>/", FeedbackModuleViewSet.as_view({
+	path("modules/<int:module_id>/feedbacks/<int:pk>/", ModuleCommentViewSet.as_view({
 		"get": "retrieve",
 		"patch": "partial_update",
 		"delete": "destroy"

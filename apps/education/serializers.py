@@ -5,7 +5,7 @@ from .models import (
     Category, Module,
     DataCard, DataCardMedia, ModuleLog,
     DataCardLog, Test, TestOption,
-    TestAnswer, Score, ModuleFeedback, Question, FeedbackModule
+    TestAnswer, Score, ModuleFeedback, ModuleQuestion, ModuleComment
 )
 
 
@@ -240,25 +240,26 @@ class RatingUserSerializer(serializers.ModelSerializer):
         fields = ("rank", "id", "first_name", "last_name", "phone", "profile_image", "total_score")
 
 
-class QuestionSerializer(serializers.ModelSerializer):
+class ModuleQuestionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Question
+        model = ModuleQuestion
         fields = ("id", "text", "answer", "module", "created_at")
         read_only_fields = ("id", "created_at")
+        ref_name = "EducationModuleQuestion"
 
 
-class FeedbackModuleSerializer(serializers.ModelSerializer):
+class ModuleCommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField(read_only=True)
     user_phone = serializers.CharField(source="user.phone", read_only=True)
 
     class Meta:
-        model = FeedbackModule
+        model = ModuleComment
         fields = ("id", "user", "user_phone", "module", "feedback", "reply_to", "is_admin_reply", "replies", "created_at", "updated_at")
         read_only_fields = ("id", "user", "is_admin_reply", "created_at", "updated_at")
 
     def get_replies(self, obj):
         replies = obj.replies.all()
-        return FeedbackModuleSerializer(replies, many=True).data
+        return ModuleCommentSerializer(replies, many=True).data
 
     def validate(self, attrs):
         request = self.context.get("request")

@@ -8,14 +8,14 @@ from apps.accounts.models import CustomUser
 from .models import (
 	Category, Module, DataCardLog,
 	DataCard, ModuleLog, Score,
-	Test, TestAnswer, ModuleFeedback, Question, FeedbackModule
+	Test, TestAnswer, ModuleFeedback, ModuleQuestion, ModuleComment
 )
 from .serializers import (
 	CategorySerializer, ModuleSerializer,
 	DataCardSerializer, ModuleLogSerializer,
 	DataCardLogSerializer, RatingUserSerializer,
 	TestSerializer, TestAnswerSerializer,
-	ScoreSerializer, ModuleFeedbackSerializer, QuestionSerializer, FeedbackModuleSerializer
+	ScoreSerializer, ModuleFeedbackSerializer, ModuleQuestionSerializer, ModuleCommentSerializer
 )
 from .paginations import RatingPagination
 from .permissions import IsSuperUserForWrite, IsScoreOwner
@@ -303,44 +303,44 @@ class RatingListView(ListAPIView):
 		)
 
 
-class QuestionViewSet(viewsets.ReadOnlyModelViewSet):
-	serializer_class = QuestionSerializer
+class ModuleQuestionViewSet(viewsets.ReadOnlyModelViewSet):
+	serializer_class = ModuleQuestionSerializer
 	permission_classes = (permissions.IsAuthenticated,)
 	http_method_names = ["get", "head", "options"]
 
 	def get_queryset(self):
 		if getattr(self, "swagger_fake_view", False):
-			return Question.objects.none()
+			return ModuleQuestion.objects.none()
 
 		module_id = self.kwargs.get('module_id')
 		if not module_id:
-			return Question.objects.none()
+			return ModuleQuestion.objects.none()
 
-		queryset = Question.objects.select_related("module").filter(module_id=module_id)
+		queryset = ModuleQuestion.objects.select_related("module").filter(module_id=module_id)
 		return queryset.order_by("created_at")
 
 
-class FeedbackModuleViewSet(viewsets.ModelViewSet):
-	serializer_class = FeedbackModuleSerializer
+class ModuleCommentViewSet(viewsets.ModelViewSet):
+	serializer_class = ModuleCommentSerializer
 	permission_classes = (permissions.IsAuthenticated,)
 	http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
 	def get_queryset(self):
 		if getattr(self, "swagger_fake_view", False):
-			return FeedbackModule.objects.none()
+			return ModuleComment.objects.none()
 
 		module_id = self.kwargs.get('module_id')
 		if not module_id:
-			return FeedbackModule.objects.none()
+			return ModuleComment.objects.none()
 
 		if self.request.user.is_superuser:
-			return FeedbackModule.objects.select_related("user", "module", "reply_to").filter(module_id=module_id)
+			return ModuleComment.objects.select_related("user", "module", "reply_to").filter(module_id=module_id)
 		
-		return FeedbackModule.objects.select_related("user", "module", "reply_to").filter(
+		return ModuleComment.objects.select_related("user", "module", "reply_to").filter(
 			module_id=module_id,
 			user=self.request.user,
 			reply_to__isnull=True
 		)
 
 	def perform_create(self, serializer):
-		serializer.save()
+		serializer.save(user=self.request.user)

@@ -12,8 +12,8 @@ from .models import (
 	TestAnswer,
 	Score,
 	ModuleFeedback,
-	Question,
-	FeedbackModule,
+	ModuleQuestion,
+	ModuleComment,
 )
 
 
@@ -27,8 +27,8 @@ class TestOptionInline(admin.TabularInline):
 	extra = 2
 
 
-class FeedbackModuleRepliesInline(admin.TabularInline):
-	model = FeedbackModule
+class ModuleCommentRepliesInline(admin.TabularInline):
+	model = ModuleComment
 	fk_name = "reply_to"
 	extra = 1
 	fields = ("feedback", "created_at")
@@ -102,22 +102,22 @@ class ModuleFeedbackAdmin(admin.ModelAdmin):
 	readonly_fields = ("created_at", "updated_at")
 
 
-@admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
+@admin.register(ModuleQuestion)
+class ModuleQuestionAdmin(admin.ModelAdmin):
 	list_display = ("id", "text", "module", "created_at")
 	list_filter = ("created_at", "module")
 	search_fields = ("text", "answer", "module__name")
 	readonly_fields = ("created_at",)
 
 
-@admin.register(FeedbackModule)
-class FeedbackModuleAdmin(admin.ModelAdmin):
+@admin.register(ModuleComment)
+class ModuleCommentAdmin(admin.ModelAdmin):
 	list_display = ("id", "user", "module", "is_admin_reply", "created_at")
 	list_filter = ("is_admin_reply", "created_at", "module")
 	search_fields = ("feedback", "user__phone", "module__name")
 	readonly_fields = ("created_at", "updated_at", "user")
 	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
-	inlines = (FeedbackModuleRepliesInline,)
+	inlines = (ModuleCommentRepliesInline,)
 	
 	def get_queryset(self, request):
 		qs = super().get_queryset(request)
