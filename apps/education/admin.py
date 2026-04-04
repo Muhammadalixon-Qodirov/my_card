@@ -124,7 +124,7 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 	list_display = ("id", "user", "module", "is_admin_reply", "created_at")
 	list_filter = ("is_admin_reply", "created_at", "module")
 	search_fields = ("feedback", "user__phone", "module__name")
-	readonly_fields = ("created_at", "updated_at", "user")
+	readonly_fields = ("created_at", "updated_at", "user", "module")
 	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
 	inlines = (ModuleCommentRepliesInline,)
 	
@@ -135,6 +135,9 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 		return qs.filter(reply_to__isnull=True)
 	
 	def save_model(self, request, obj, form, change):
-		if obj.reply_to and not obj.is_admin_reply:
-			obj.is_admin_reply = True
+		if obj.reply_to:
+			# Inherit module from parent comment and mark as admin reply
+			obj.module = obj.reply_to.module
+			if not obj.is_admin_reply:
+				obj.is_admin_reply = True
 		super().save_model(request, obj, form, change)
