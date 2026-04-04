@@ -330,8 +330,7 @@ class DeleteAccountConfirmView(APIView):
         cache.delete(otp_key)
         cache.delete(delete_pending_key)
 
-        user.is_active = False
-        user.save()
+        user.delete()
 
         return Response({"status": True, "message": "Hisob muvaffaqiyatli o'chirildi."}, status=200)
 
