@@ -38,7 +38,6 @@ class ModuleCommentRepliesInline(admin.TabularInline):
 		instances = formset.save(commit=False)
 		for instance in instances:
 			if instance.reply_to:
-				# Inherit module and user from parent comment
 				instance.module = instance.reply_to.module
 				instance.user = request.user
 				instance.is_admin_reply = True
@@ -128,18 +127,4 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 	search_fields = ("feedback", "user__phone", "module__name")
 	readonly_fields = ("created_at", "updated_at", "user", "module")
 	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
-	inlines = (ModuleCommentRepliesInline,)
-	
-	def get_queryset(self, request):
-		qs = super().get_queryset(request)
-		if request.user.is_superuser:
-			return qs
-		return qs.filter(reply_to__isnull=True)
-	
-	def save_model(self, request, obj, form, change):
-		if obj.reply_to:
-			# Inherit module from parent comment and mark as admin reply
-			obj.module = obj.reply_to.module
-			if not obj.is_admin_reply:
-				obj.is_admin_reply = True
-		super().save_model(request, obj, form, change)
+	# inlines = (ModuleCommentRepliesInline,)
