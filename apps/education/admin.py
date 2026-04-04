@@ -27,24 +27,6 @@ class TestOptionInline(admin.TabularInline):
 	extra = 2
 
 
-class ModuleCommentRepliesInline(admin.TabularInline):
-	model = ModuleComment
-	fk_name = "reply_to"
-	extra = 1
-	fields = ("feedback", "is_admin_reply", "created_at")
-	readonly_fields = ("created_at",)
-	
-	def save_formset(self, request, form, formset, change):
-		instances = formset.save(commit=False)
-		for instance in instances:
-			if instance.reply_to:
-				instance.module = instance.reply_to.module
-				instance.user = request.user
-				instance.is_admin_reply = True
-			instance.save()
-		formset.save_m2m()
-
-
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
 	list_display = ("id", "name", "owner", "created_at")
@@ -127,9 +109,11 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 	search_fields = ("feedback", "user__phone", "module__name")
 	readonly_fields = ("created_at", "updated_at", "user", "module")
 	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
-	inlines = (ModuleCommentRepliesInline, )
 
 	def save_model(self, request, obj, form, change):
 		if not obj.pk:
 			obj.user = request.user
+			obj.is_admin_reply = True
+			if obj.reply_to:
+				obj.module = obj.reply_to.module
 		super().save_model(request, obj, form, change)
