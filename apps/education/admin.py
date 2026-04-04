@@ -107,7 +107,7 @@ class ModuleCommentAdmin(admin.ModelAdmin):
 	list_display = ("id", "user", "module", "is_admin_reply", "created_at")
 	list_filter = ("is_admin_reply", "created_at", "module")
 	search_fields = ("feedback", "user__phone", "module__name")
-	readonly_fields = ("created_at", "updated_at", "user", "module")
+	readonly_fields = ("created_at", "updated_at", "user")
 	fields = ("user", "module", "feedback", "reply_to", "is_admin_reply", "created_at", "updated_at")
 
 	def save_model(self, request, obj, form, change):
