@@ -49,7 +49,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(EmergencyNotification)
 class EmergencyNotificationAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "has_image", "short_body", "created_at")
+    list_display = ("id", "title", "is_active", "has_image", "short_body", "created_at")
     search_fields = ("title", "body")
     readonly_fields = ("image_preview", "created_at")
     list_per_page = 20
@@ -58,7 +58,7 @@ class EmergencyNotificationAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Asosiy ma'lumot", {
-            "fields": ("title", "body", "image", "image_preview"),
+            "fields": ("title", "body", "image", "is_active", "image_preview"),
         }),
         ("Meta", {
             "fields": ("created_at",),

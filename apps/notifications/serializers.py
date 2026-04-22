@@ -6,8 +6,8 @@ from .models import EmergencyNotification, Notification
 class EmergencyNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmergencyNotification
-        fields = ("id", "title", "body", "image", "created_at")
-        read_only_fields = ("id", "created_at")
+        fields = ("id", "title", "body", "image", "is_active", "created_at")
+        read_only_fields = ("id", "is_active", "created_at")
 
 
 class NotificationSerializer(serializers.ModelSerializer):

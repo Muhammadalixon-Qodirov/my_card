@@ -39,6 +39,7 @@ class EmergencyNotification(models.Model):
     image = models.ImageField(upload_to="emergency_notifications/", null=True, blank=True)
     title = models.CharField(max_length=255)
     body = models.TextField()
+    is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -47,4 +48,5 @@ class EmergencyNotification(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Favqulodda: {self.title}"
+        status = "faol" if self.is_active else "faol emas"
+        return f"Favqulodda: {self.title} | {status}"
