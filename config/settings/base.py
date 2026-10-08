@@ -36,6 +36,7 @@ LOCAL_APPS = [
     "apps.wallet.apps.WalletConfig",
     "apps.society.apps.SocietyConfig",
     "apps.notifications.apps.NotificationsConfig",
+    "apps.adminpanel.apps.AdminPanelConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -43,6 +44,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 MIDDLEWARE = [
+    "apps.adminpanel.metrics.ApiMetricsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
