@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from decouple import config
+from celery.schedules import crontab
+from decouple import config, Csv
 from datetime import timedelta
 
 
@@ -37,6 +38,7 @@ LOCAL_APPS = [
     "apps.society.apps.SocietyConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.adminpanel.apps.AdminPanelConfig",
+    "apps.newsbot.apps.NewsbotConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -248,6 +250,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "society.close_expired_choices",
         "schedule": timedelta(hours=24),
     },
+    "newsbot-collect": {
+        "task": "newsbot.collect",
+        "schedule": crontab(hour="*/2", minute=30),
+    },
+    "newsbot-daily": {
+        "task": "newsbot.run",
+        "schedule": crontab(hour=9, minute=0),
+    },
 }
 
 
@@ -257,6 +267,17 @@ ESKIZ_PASSWORD = config("ESKIZ_PASSWORD")
 ESKIZ_SENDER_NAME = "4546"
 
 FIREBASE_CREDENTIALS_PATH = BASE_DIR / "mycard-7f26d-firebase-adminsdk-fbsvc-daad80816c.json"
+
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
+NEWSBOT_GROQ_MODEL = config("NEWSBOT_GROQ_MODEL", default="openai/gpt-oss-120b")
+NEWSBOT_TELEGRAM_TOKEN = config("NEWSBOT_TELEGRAM_TOKEN", default="")
+NEWSBOT_ADMIN_CHAT_IDS = config("NEWSBOT_ADMIN_CHAT_IDS", default="", cast=Csv(int))
+NEWSBOT_WEBHOOK_SECRET = config("NEWSBOT_WEBHOOK_SECRET", default="")
+NEWSBOT_OWNER_PHONE = config("NEWSBOT_OWNER_PHONE", default="")
+NEWSBOT_USE_TELEGRAM = config("NEWSBOT_USE_TELEGRAM", default=False, cast=bool)
+NEWSBOT_MAX_AGE_DAYS = 3
+NEWSBOT_MAX_PER_RUN = 40
+NEWSBOT_LLM_PAUSE = 2
 
 
 LOG_DIR = BASE_DIR / "logs"
