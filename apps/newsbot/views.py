@@ -53,8 +53,8 @@ def _handle_message(message: dict):
     if text.startswith("/start"):
         telegram.api("sendMessage", chat_id=chat_id, text=f"Sizning chat ID: {chat_id}")
     elif text.startswith("/run") and chat_id in settings.NEWSBOT_ADMIN_CHAT_IDS:
-        run.delay()
-        telegram.api("sendMessage", chat_id=chat_id, text="Yig'ish boshlandi, qoralamalar shu yerga keladi.")
+        run.delay(chat_id)
+        telegram.api("sendMessage", chat_id=chat_id, text="Yig'ish boshlandi, natijasini shu yerga yozaman.")
 
 
 @csrf_exempt

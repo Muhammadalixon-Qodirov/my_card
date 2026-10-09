@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.accounts.models import CustomUser
 from apps.news.models import News
-from . import fetchers, llm, pipeline, telegram
+from . import fetchers, llm, pipeline, tasks, telegram
 from .fetchers import RawItem
 from .models import CollectedItem
 
@@ -86,10 +86,12 @@ class CollectTests(TestCase):
             raw("https://e.uz/2", title="Кибермошенники"),
             raw("https://e.uz/3", title="Timsoh topildi", text="Olimlar buni firibgarlik emas deyishdi."),
             raw("https://e.uz/4", title="Bank ogohlantirdi", text="Firibgarlar fishing saytlar ochmoqda."),
+            raw("https://e.uz/5", title="250 fuqaro kartasidan 3 mlrd so‘m o‘g‘irlandi"),
         ]
         self.collect(GENERAL, items)
         self.assertEqual(
-            sorted(CollectedItem.objects.values_list("url", flat=True)), ["https://e.uz/2", "https://e.uz/4"]
+            sorted(CollectedItem.objects.values_list("url", flat=True)),
+            ["https://e.uz/2", "https://e.uz/4", "https://e.uz/5"],
         )
 
     def test_undated_backlog_is_skipped_on_first_run_only(self):
@@ -142,6 +144,31 @@ class ProcessTests(TestCase):
         self.assertEqual(pipeline.process(), {"drafted": 0, "rejected": 0, "failed": 0})
         self.item.refresh_from_db()
         self.assertEqual(self.item.status, CollectedItem.NEW)
+
+
+@override_settings(**SETTINGS, CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+class ManualRunTests(TestCase):
+    def run_task(self, stats):
+        with mock.patch.object(tasks.pipeline, "run", return_value=stats), \
+                mock.patch.object(tasks.telegram, "api") as api:
+            tasks.run(111)
+        return api.call_args.kwargs
+
+    def test_admin_is_told_when_nothing_was_found(self):
+        sent = self.run_task({"new": 0, "errors": ["ftc"], "drafted": 0, "rejected": 0, "failed": 0})
+        self.assertEqual(sent["chat_id"], 111)
+        self.assertIn("Mos yangi material topilmadi", sent["text"])
+        self.assertIn("ftc", sent["text"])
+
+    def test_admin_is_told_how_many_drafts_were_sent(self):
+        sent = self.run_task({"new": 5, "errors": [], "drafted": 2, "rejected": 3, "failed": 0})
+        self.assertIn("2 ta qoralama", sent["text"])
+
+    def test_scheduled_run_stays_silent(self):
+        with mock.patch.object(tasks.pipeline, "run", return_value={}), \
+                mock.patch.object(tasks.telegram, "api") as api:
+            tasks.run()
+        api.assert_not_called()
 
 
 @override_settings(**SETTINGS)

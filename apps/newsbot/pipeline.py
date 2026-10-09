@@ -22,7 +22,7 @@ MIN_TEXT_CHARS = 500
 # Umumiy manbalardan faqat shu so'zlar uchraganlari olinadi (o'zbek / rus / ingliz).
 KEYWORDS = re.compile(
     r"firibgar|kiber|fishing|xaker|zararli\s+(dastur|ilova|havola|fayl)|sms.{0,3}kod|"
-    r"akkaunt\w*\s+(o.g.ir|egalla|buz)|karta\w*\s+ma.lumot|"
+    r"akkaunt\w*\s+(o.g.ir|egalla|buz)|karta\w*\s+ma.lumot|karta(si|lari)dan|plastik\s+karta|"
     r"мошенн|кибер|фишинг|хакер|вредонос|взлом|утечк\w+\s+данных|скам|троян|"
     r"scam|phishing|fraud|malware|data\s+breach",
     re.I,

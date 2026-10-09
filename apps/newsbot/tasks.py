@@ -3,7 +3,7 @@ import logging
 from celery import shared_task
 from django.core.cache import cache
 
-from . import pipeline
+from . import pipeline, telegram
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,19 @@ def _locked(job):
     return stats
 
 
+def _summary(stats: dict | None) -> str:
+    if stats is None:
+        return "Oldingi ishga tushirish hali tugamagan, birozdan keyin urinib ko'ring."
+    if stats["drafted"]:
+        text = f"Tayyor: {stats['drafted']} ta qoralama yuborildi."
+    else:
+        text = "Mos yangi material topilmadi."
+    text += f"\nYangi nomzodlar: {stats['new']}, AI tashladi: {stats['rejected']}, xato: {stats['failed']}."
+    if stats["errors"]:
+        text += f"\nO'qilmagan manbalar: {', '.join(stats['errors'])}."
+    return text
+
+
 @shared_task(name="newsbot.collect")
 def collect():
     """Yangiliklar saytlarining feed'i bir necha soatnigina qamraydi, shuning uchun tez-tez o'qiladi."""
@@ -30,5 +43,12 @@ def collect():
 
 
 @shared_task(name="newsbot.run")
-def run():
-    return _locked(pipeline.run)
+def run(notify_chat_id: int | None = None):
+    """notify_chat_id — /run yuborgan admin: natija nima bo'lsa ham unga javob yoziladi."""
+    stats = _locked(pipeline.run)
+    if notify_chat_id:
+        try:
+            telegram.api("sendMessage", chat_id=notify_chat_id, text=_summary(stats))
+        except telegram.TelegramError as exc:
+            logger.warning("newsbot: natija yuborilmadi: %s", exc)
+    return stats
