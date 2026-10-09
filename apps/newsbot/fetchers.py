@@ -1,4 +1,5 @@
 import html
+import io
 import json
 import logging
 import re
@@ -12,6 +13,7 @@ from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
 import requests
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,16 @@ class RawItem:
     title: str = ""
     text: str = ""
     published_at: datetime | None = None
+    image_url: str = ""
+
+
+def _is_image(url: str, hint: str = "") -> bool:
+    return hint.startswith("image") or bool(re.search(r"\.(jpe?g|png|webp|gif)(\?|$)", url, re.I))
+
+
+def _first_image(markup: str) -> str:
+    match = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', markup or "", re.I)
+    return html.unescape(match.group(1)) if match else ""
 
 
 def http_get(url: str, headers: dict | None = None) -> str:
@@ -117,10 +129,13 @@ def fetch_rss(source: dict) -> list[RawItem]:
     for node in root.iter():
         if _local(node.tag) not in ("item", "entry"):
             continue
-        fields = {}
+        fields, image = {}, ""
         for child in node:
             name = _local(child.tag)
-            if name == "link" and child.get("href"):
+            if name in ("enclosure", "content", "thumbnail") and child.get("url"):
+                if not image and _is_image(child.get("url"), child.get("type") or child.get("medium") or ""):
+                    image = child.get("url")
+            elif name == "link" and child.get("href"):
                 fields.setdefault("link", child.get("href"))
             elif name not in fields or name == "encoded":
                 fields[name] = "".join(child.itertext()) if len(child) else (child.text or "")
@@ -134,6 +149,7 @@ def fetch_rss(source: dict) -> list[RawItem]:
             text=html_to_text(body),
             published_at=parse_date(fields.get("pubdate") or fields.get("published")
                                     or fields.get("updated") or fields.get("date")),
+            image_url=image or _first_image(body),
         ))
     return items
 
@@ -147,6 +163,7 @@ def fetch_govuz(source: dict) -> list[RawItem]:
             title=row.get("title", ""),
             text=html_to_text(row.get("anons", "")),
             published_at=parse_date(row.get("date")),
+            image_url=row.get("anons_image") or "",
         )
         for row in data.get("data", [])
     ]
@@ -173,11 +190,13 @@ def fetch_telegram(source: dict) -> list[RawItem]:
         if not post or not body:
             continue
         text = html_to_text(body.group(1))
+        photo = re.search(r"tgme_widget_message_photo_wrap[^>]*background-image:url\('([^']+)'\)", chunk)
         items.append(RawItem(
             url=f"https://t.me/{channel}/{post.group(1)}",
             title=text.split("\n", 1)[0][:200],
             text=text,
             published_at=parse_date(date.group(1)) if date else None,
+            image_url=photo.group(1) if photo else "",
         ))
     return items
 
@@ -194,17 +213,40 @@ def fetch_source(source: dict) -> list[RawItem]:
     return FETCHERS[source["kind"]](source)
 
 
-def fetch_article(source: dict, url: str) -> tuple[str, str]:
-    """Maqola sahifasidan (sarlavha, matn) oladi."""
+def fetch_article(source: dict, url: str) -> tuple[str, str, str]:
+    """Maqola sahifasidan (sarlavha, matn, rasm manzili) oladi."""
     if source["kind"] == "govuz":
         news_id = url.rstrip("/").rsplit("/", 1)[-1]
         data = json.loads(http_get(f"{GOVUZ_API}/view?id={news_id}",
                                    {"code": source["code"], "language": "oz"})).get("data", {})
-        return data.get("title", ""), html_to_text(data.get("body", ""))
+        image = data.get("body_image") or data.get("anons_image") or ""
+        return data.get("title", ""), html_to_text(data.get("body", "")), image
 
     page = http_get(url)
+    og_image = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', page, re.I) \
+        or re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', page, re.I)
+    image = urljoin(url, html.unescape(og_image.group(1))) if og_image else ""
     heading = re.search(r"<h1[^>]*>(.*?)</h1>", page, re.S) or re.search(r"<title[^>]*>(.*?)</title>", page, re.S)
     title = html_to_text(heading.group(1)).replace("\n", " ") if heading else ""
     paragraphs = (html_to_text(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", page, re.S))
     text = "\n".join(p for p in paragraphs if len(p) > 60)
-    return html.unescape(title), text
+    return html.unescape(title), text, image
+
+
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+IMAGE_EXTENSIONS = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp", "GIF": ".gif"}
+
+
+def download_image(url: str) -> tuple[bytes, str]:
+    """Rasmni yuklab, haqiqatan rasm ekanini tekshiradi. (baytlar, kengaytma) qaytaradi."""
+    response = requests.get(url, headers=HEADERS, timeout=30, stream=True)
+    response.raise_for_status()
+    data = response.raw.read(MAX_IMAGE_BYTES + 1, decode_content=True)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise ValueError("Rasm juda katta")
+    with Image.open(io.BytesIO(data)) as image:
+        image.verify()
+        extension = IMAGE_EXTENSIONS.get(image.format)
+    if not extension:
+        raise ValueError(f"Qo'llanmaydigan format: {image.format}")
+    return data, extension

@@ -4,13 +4,14 @@ import time
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import CustomUser
-from apps.news.models import News
+from apps.news.models import News, NewsMedia
 from . import llm, telegram
-from .fetchers import fetch_article, fetch_source
+from .fetchers import download_image, fetch_article, fetch_source
 from .models import CollectedItem
 from .sources import SOURCES, SOURCES_BY_KEY
 
@@ -79,25 +80,28 @@ def collect() -> dict:
 
             CollectedItem.objects.create(
                 source=source["key"], url=raw.url, title=raw.title[:500], text=raw.text,
-                published_at=raw.published_at, status=status,
+                image_url=raw.image_url[:1000], published_at=raw.published_at, status=status,
             )
             stats["new"] += status == CollectedItem.NEW
 
     return stats
 
 
-def _fill_text(item: CollectedItem):
+def _fill_from_article(item: CollectedItem, need_image: bool = False):
+    """Feed'da yetishmagan sarlavha, matn yoki rasmni maqola sahifasidan oladi."""
     source = SOURCES_BY_KEY.get(item.source)
-    if not source or (item.title and len(item.text) >= MIN_TEXT_CHARS):
+    has_text = item.title and len(item.text) >= MIN_TEXT_CHARS
+    if not source or source["kind"] == "telegram" or (has_text and not (need_image and not item.image_url)):
         return
     try:
-        title, text = fetch_article(source, item.url)
+        title, text, image = fetch_article(source, item.url)
     except Exception as exc:
         logger.warning("newsbot: maqola o'qilmadi %s: %s", item.url, exc)
         return
     item.title = item.title or title[:500]
     if len(text) > len(item.text):
         item.text = text
+    item.image_url = item.image_url or image[:1000]
 
 
 def process() -> dict:
@@ -110,7 +114,7 @@ def process() -> dict:
 
     for item in items[:settings.NEWSBOT_MAX_PER_RUN]:
         if not item.draft_content:
-            _fill_text(item)
+            _fill_from_article(item)
             if not (item.title or item.text):
                 item.status, item.ai_reason = CollectedItem.FAILED, "Matn olinmadi"
                 item.save()
@@ -136,6 +140,7 @@ def process() -> dict:
                 stats["rejected"] += 1
                 continue
             item.draft_title, item.draft_content = result["title"], result["content"]
+            _fill_from_article(item, need_image=True)
             item.save()
             time.sleep(settings.NEWSBOT_LLM_PAUSE)
 
@@ -166,8 +171,20 @@ def _owner() -> CustomUser:
     return owner
 
 
+def _attach_image(item: CollectedItem):
+    # Rasm olinmasa ham yangilik chiqadi: tasdiq rasmga bog'liq bo'lmasligi kerak.
+    try:
+        data, extension = download_image(item.image_url)
+        NewsMedia.objects.create(
+            news=item.news, media_type="image",
+            media_file=ContentFile(data, name=f"newsbot_{item.pk}{extension}"),
+        )
+    except Exception as exc:
+        logger.warning("newsbot: rasm biriktirilmadi %s: %s", item.image_url, exc)
+
+
 @transaction.atomic
-def review(item_id: int, approve: bool, reviewer: str) -> CollectedItem | None:
+def review(item_id: int, approve: bool, reviewer: str, with_image: bool = True) -> CollectedItem | None:
     """Admin qarorini qo'llaydi. Material allaqachon ko'rib chiqilgan bo'lsa None qaytaradi."""
     item = CollectedItem.objects.select_for_update().filter(pk=item_id, status=CollectedItem.PENDING).first()
     if item is None:
@@ -178,6 +195,8 @@ def review(item_id: int, approve: bool, reviewer: str) -> CollectedItem | None:
             content=f"{item.draft_content}\n\nManba: {source_name(item.source)} — {item.url}",
             owner=_owner(),
         )
+        if with_image and item.image_url:
+            _attach_image(item)
         item.status = CollectedItem.APPROVED
     else:
         item.status = CollectedItem.DECLINED

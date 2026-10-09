@@ -1,4 +1,5 @@
 import json
+import tempfile
 from datetime import timedelta
 from unittest import mock
 
@@ -19,12 +20,13 @@ RSS = """<?xml version="1.0" encoding="UTF-8"?>
     <link>https://example.uz/a</link>
     <pubDate>Thu, 08 Oct 2026 09:57:16 +0000</pubDate>
     <description><![CDATA[<p>Qisqa</p>]]></description>
+    <enclosure url="https://example.uz/cover.jpg" type="image/jpeg" length="1"/>
     <content:encoded><![CDATA[<p>Birinchi <b>xatboshi</b>.</p><script>x()</script><p>Ikkinchi.</p>]]></content:encoded>
   </item>
   <item>
     <title>Sanasiz</title>
     <link>https://example.uz/b</link>
-    <description>Matn</description>
+    <description><![CDATA[Matn <img src="https://example.uz/inline.png?w=1&amp;h=2">]]></description>
   </item>
 </channel>
 </rss>"""
@@ -52,6 +54,8 @@ class FetcherTests(TestCase):
         self.assertEqual(first.text, "Birinchi xatboshi.\nIkkinchi.")
         self.assertEqual(first.published_at.isoformat(), "2026-10-08T09:57:16+00:00")
         self.assertIsNone(second.published_at)
+        self.assertEqual(first.image_url, "https://example.uz/cover.jpg")
+        self.assertEqual(second.image_url, "https://example.uz/inline.png?w=1&h=2")
 
     def test_dates_of_every_source_format(self):
         self.assertEqual(fetchers.parse_date("October 6, 2026 | 12:47PM").hour, 12)
@@ -159,7 +163,7 @@ class LLMGuardTests(TestCase):
         self.assertTrue(result["relevant"])
 
 
-@override_settings(**SETTINGS)
+@override_settings(**SETTINGS, MEDIA_ROOT=tempfile.mkdtemp(prefix="mycard-test-media-"))
 class WebhookTests(TestCase):
     URL = "/api/v1/newsbot/telegram/webhook/"
 
@@ -203,6 +207,31 @@ class WebhookTests(TestCase):
                              headers={"X-Telegram-Bot-Api-Secret-Token": "s3cret"})
         self.assertEqual(News.objects.count(), 1)
         self.assertEqual(called.call_args_list[-1].args, ("editMessageText",))
+
+    def press_with_image(self, action, download):
+        self.item.image_url = "https://e.uz/cover.png"
+        self.item.save()
+        with mock.patch.object(pipeline, "download_image", side_effect=download) as download_image:
+            self.press(action)
+        return download_image
+
+    def test_approve_attaches_the_source_image(self):
+        self.press_with_image("approve", [(b"png-bytes", ".png")])
+        media = News.objects.get().media.get()
+        self.assertEqual(media.media_type, "image")
+        self.assertTrue(media.media_file.name.endswith(".png"))
+        self.assertEqual(media.media_file.read(), b"png-bytes")
+
+    def test_approve_without_image_skips_the_download(self):
+        download_image = self.press_with_image("noimg", [(b"png-bytes", ".png")])
+        download_image.assert_not_called()
+        self.assertEqual(self.item.status, CollectedItem.APPROVED)
+        self.assertFalse(News.objects.get().media.exists())
+
+    def test_broken_image_does_not_block_publishing(self):
+        self.press_with_image("approve", OSError("404"))
+        self.assertEqual(self.item.status, CollectedItem.APPROVED)
+        self.assertFalse(News.objects.get().media.exists())
 
     def test_decline_publishes_nothing(self):
         self.press("decline")

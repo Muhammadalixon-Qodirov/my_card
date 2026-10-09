@@ -32,16 +32,16 @@ def _handle_callback(callback: dict):
         item_id = int(item_id)
     except ValueError:
         return
-    if prefix != "nb" or action not in ("approve", "decline"):
+    if prefix != "nb" or action not in ("approve", "noimg", "decline"):
         return
 
+    approved = action != "decline"
     reviewer = user.get("username") or user.get("first_name") or str(user["id"])
-    item = pipeline.review(item_id, approve=action == "approve", reviewer=reviewer)
+    item = pipeline.review(item_id, approve=approved, reviewer=reviewer, with_image=action == "approve")
     if item is None:
         _answer(callback, "Allaqachon ko'rib chiqilgan")
         return
 
-    approved = action == "approve"
     _answer(callback, "Ilovaga joylandi" if approved else "Rad etildi")
     footer = f"✅ Tasdiqladi: {reviewer}" if approved else f"❌ Rad etdi: {reviewer}"
     telegram.mark_reviewed(item, pipeline.source_name(item.source), footer)

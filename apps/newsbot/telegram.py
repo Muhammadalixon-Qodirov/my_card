@@ -44,12 +44,20 @@ def draft_text(item, source_name: str, footer: str = "") -> str:
 
 def send_draft(item, source_name: str) -> list[list[int]]:
     """Qoralamani barcha adminlarga yuboradi, [[chat_id, message_id], ...] qaytaradi."""
-    keyboard = {"inline_keyboard": [[
+    rows = [[
         {"text": "✅ Tasdiqlash", "callback_data": f"nb:approve:{item.pk}"},
         {"text": "❌ Rad etish", "callback_data": f"nb:decline:{item.pk}"},
-    ]]}
+    ]]
+    if item.image_url:
+        rows.append([{"text": "✅ Rasmsiz tasdiqlash", "callback_data": f"nb:noimg:{item.pk}"}])
+    keyboard = {"inline_keyboard": rows}
     sent = []
     for chat_id in settings.NEWSBOT_ADMIN_CHAT_IDS:
+        if item.image_url:
+            try:
+                api("sendPhoto", chat_id=chat_id, photo=item.image_url, caption=item.draft_title[:200])
+            except TelegramError as exc:
+                logger.warning("newsbot: rasm ko'rsatilmadi %s: %s", item.image_url, exc)
         try:
             message = api(
                 "sendMessage", chat_id=chat_id, text=draft_text(item, source_name),

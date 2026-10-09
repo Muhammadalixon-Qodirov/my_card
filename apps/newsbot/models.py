@@ -26,6 +26,7 @@ class CollectedItem(models.Model):
     url = models.URLField(max_length=1000, unique=True)
     title = models.CharField(max_length=500, blank=True)
     text = models.TextField(blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
     published_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=NEW, db_index=True)
     ai_reason = models.CharField(max_length=500, blank=True)
