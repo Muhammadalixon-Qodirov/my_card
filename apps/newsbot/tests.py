@@ -172,6 +172,27 @@ class ManualRunTests(TestCase):
 
 
 @override_settings(**SETTINGS)
+class DraftPhotoTests(TestCase):
+    def test_photo_is_uploaded_when_telegram_cannot_fetch_the_url(self):
+        item = CollectedItem(pk=1, url="https://e.uz/1", draft_title="Sarlavha", image_url="https://e.uz/c.png")
+        calls = []
+
+        def api(method, files=None, **payload):
+            calls.append((method, files, payload.get("photo")))
+            if method == "sendPhoto" and not files:
+                raise telegram.TelegramError("failed to get HTTP URL content")
+            return {"message_id": 9}
+
+        with mock.patch.object(telegram, "api", side_effect=api), \
+                mock.patch.object(telegram, "download_image", return_value=(b"png", ".png")):
+            sent = telegram.send_draft(item, "Test")
+
+        self.assertEqual(sent, [[111, 9]])
+        self.assertEqual([c[0] for c in calls], ["sendPhoto", "sendPhoto", "sendMessage"])
+        self.assertEqual(calls[1][1], {"photo": ("image.png", b"png")})
+
+
+@override_settings(**SETTINGS)
 class LLMGuardTests(TestCase):
     def review(self, draft, text):
         body = {"choices": [{"message": {"content": json.dumps(

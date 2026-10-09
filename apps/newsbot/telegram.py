@@ -4,6 +4,8 @@ import logging
 import requests
 from django.conf import settings
 
+from .fetchers import download_image
+
 logger = logging.getLogger(__name__)
 
 MAX_CONTENT_CHARS = 3300
@@ -13,13 +15,14 @@ class TelegramError(Exception):
     pass
 
 
-def api(method: str, **payload) -> dict:
+def api(method: str, files: dict | None = None, **payload) -> dict:
     if not settings.NEWSBOT_TELEGRAM_TOKEN:
         raise TelegramError("NEWSBOT_TELEGRAM_TOKEN sozlanmagan")
+    body = {"data": payload, "files": files} if files else {"json": payload}
     try:
         response = requests.post(
             f"https://api.telegram.org/bot{settings.NEWSBOT_TELEGRAM_TOKEN}/{method}",
-            json=payload, timeout=30,
+            timeout=60, **body,
         )
         data = response.json()
     except (requests.RequestException, ValueError) as exc:
@@ -42,6 +45,21 @@ def draft_text(item, source_name: str, footer: str = "") -> str:
     return f"{text}\n\n{footer}" if footer else text
 
 
+def send_photo(chat_id: int, item):
+    caption = item.draft_title[:200]
+    try:
+        api("sendPhoto", chat_id=chat_id, photo=item.image_url, caption=caption)
+        return
+    except TelegramError:
+        pass
+    # Ba'zi saytlar Telegram serverlariga rasm bermaydi: o'zimiz yuklab, fayl qilib yuboramiz.
+    try:
+        data, extension = download_image(item.image_url)
+        api("sendPhoto", files={"photo": (f"image{extension}", data)}, chat_id=chat_id, caption=caption)
+    except Exception as exc:
+        logger.warning("newsbot: rasm ko'rsatilmadi %s: %s", item.image_url, exc)
+
+
 def send_draft(item, source_name: str) -> list[list[int]]:
     """Qoralamani barcha adminlarga yuboradi, [[chat_id, message_id], ...] qaytaradi."""
     rows = [[
@@ -54,10 +72,7 @@ def send_draft(item, source_name: str) -> list[list[int]]:
     sent = []
     for chat_id in settings.NEWSBOT_ADMIN_CHAT_IDS:
         if item.image_url:
-            try:
-                api("sendPhoto", chat_id=chat_id, photo=item.image_url, caption=item.draft_title[:200])
-            except TelegramError as exc:
-                logger.warning("newsbot: rasm ko'rsatilmadi %s: %s", item.image_url, exc)
+            send_photo(chat_id, item)
         try:
             message = api(
                 "sendMessage", chat_id=chat_id, text=draft_text(item, source_name),
